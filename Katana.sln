@@ -1,0 +1,30 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28010.2048
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Katana", "Katana\Katana.csproj", "{AAD58A60-0E2F-4378-8767-CD72E1CBFB58}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{15B9486D-FD31-4B54-B013-B1FE2E18FA30}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AAD58A60-0E2F-4378-8767-CD72E1CBFB58}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AAD58A60-0E2F-4378-8767-CD72E1CBFB58}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AAD58A60-0E2F-4378-8767-CD72E1CBFB58}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AAD58A60-0E2F-4378-8767-CD72E1CBFB58}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E5C13A4B-6FD4-4ABA-9D50-F56E76497CA5}
+	EndGlobalSection
+EndGlobal

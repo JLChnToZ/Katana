@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>JLChnToZ.Katana</RootNamespace>
+    <Version>0.1.0</Version>
+    <Authors>Jeremy Lam "JLChnToZ"</Authors>
+    <Company>Explosive Theorem Lab</Company>
+    <Description>Katana is a new simple programming language and data structure.</Description>
+  </PropertyGroup>
+
+</Project>
