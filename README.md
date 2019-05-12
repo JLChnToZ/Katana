@@ -8,22 +8,23 @@ Example
 -------
 The language itself is look like this, somewhat looks like a mixture of LISP and JavaScript:
 ```
-function(factorial, (x), $(
-  =(c, 1),
-  =(result, 1),
-  while(<=(c, n), $(
-    =(result, *(@(result), @(c))),
-    =(c, +(@(c), 1))
+$(
+  function(factorial, (x), $(
+    =(c, 1),
+    =(y, 1),
+    print(format('y = {0}, c = {1}', @(y), @(c))),
+    while(<=(@(c), @(x)), $(
+      =(y, *(@(y), @(c))),
+      =(c, +(@(c), 1))
+    )),
+    return(@(y))
   )),
-  return(result)
-)),
-function(main, (), $(
-  print("please enter the number"),
-  readNumber(@(number)),
+  print(Please enter the number),
+  readNumber(number),
+  =(number, 10),
   =(result, factorial(@(number))),
-  print(format("factorial of %d: %d", @(number), @(result))),
-  return(0)
-))
+  print(format(factorial of %d: %d, @(number), @(result)))
+)
 ```
 
 This expression can be used to represent a tree structure too:
