@@ -164,5 +164,26 @@ namespace JLChnToZ.Katana.Runner {
             fieldType = field.FieldType;
             return field.Value;
         }
+
+        public static object Try(Runner runner, Node block, out FieldType fieldType) {
+            if(block.Count != 1 && block.Count != 3)
+                throw new ArgumentException();
+            try {
+                return runner.Eval(block[0], out fieldType);
+            } catch(Exception ex) {
+                var errArg = Convert.ToString(runner.Eval(block[1], out _));
+                try {
+                    runner.PushContext();
+                    runner.GetField(errArg).Value = ex.Message;
+                    object errResult = null;
+                    fieldType = FieldType.Unassigned;
+                    if(block.Count == 3)
+                        errResult = runner.Eval(block[2], out fieldType);
+                    return errResult;
+                } finally {
+                    runner.PopContext();
+                }
+            }
+        }
     }
 }

@@ -59,6 +59,7 @@ namespace JLChnToZ.Katana.Runner {
                 ["&&"] = new BuiltInFunction(AndThen, false),
                 ["||"] = new BuiltInFunction(OrElse, false),
                 ["?"] = new BuiltInFunction(If, false),
+                ["try"] = new BuiltInFunction(Try, false),
                 ["while"] = new BuiltInFunction(While, false),
                 ["function"] = new BuiltInFunction(Function, false),
                 ["return"] = new BuiltInFunction(Return, true),

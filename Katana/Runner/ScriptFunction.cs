@@ -11,20 +11,23 @@ namespace JLChnToZ.Katana.Runner {
             this.arguments = new List<Node>(arguments);
             this.body = body;
         }
-        
+
         SFieldState IFunction.Invoke(Runner runner, Node node) {
-            runner.PushContext();
-            for(int i = 0, l = arguments.Count; i < l; i++) {
-                var arg = Convert.ToString(runner.Eval(arguments[i], out _));
-                runner.GetField(arg, true).Value = node.Count > i ?
-                    runner.Eval(node[i], out _) : null;
+            try {
+                runner.PushContext();
+                for(int i = 0, l = arguments.Count; i < l; i++) {
+                    var arg = Convert.ToString(runner.Eval(arguments[i], out _));
+                    runner.GetField(arg, true).Value = node.Count > i ?
+                        runner.Eval(node[i], out _) : null;
+                }
+                var value = runner.Eval(body, out var fieldType);
+                return new SFieldState {
+                    value = value,
+                    fieldType = fieldType,
+                };
+            } finally {
+                runner.PopContext();
             }
-            var value = runner.Eval(body, out var fieldType);
-            runner.PopContext();
-            return new SFieldState {
-                value = value,
-                fieldType = fieldType,
-            };
         }
     }
 }
