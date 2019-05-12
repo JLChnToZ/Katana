@@ -15,7 +15,7 @@ namespace JLChnToZ.Katana.Runner {
                     ft == FieldType.Float || ft == FieldType.Integer ?
                         field[Convert.ToInt32(v)] :
                         field[Convert.ToString(v)] :
-                    runner.GetField(Convert.ToString(v));
+                    runner.GetFieldOrInit(Convert.ToString(v));
             }
             fieldType = field.FieldType;
             return field.Value;
@@ -35,7 +35,7 @@ namespace JLChnToZ.Katana.Runner {
                         ft == FieldType.Float || ft == FieldType.Integer ?
                             field[Convert.ToInt32(v)] :
                             field[Convert.ToString(v)] :
-                        runner.GetField(Convert.ToString(v));
+                        runner.GetFieldOrInit(Convert.ToString(v));
             }
             fieldType = field.FieldType;
             return field.Value;
@@ -82,7 +82,7 @@ namespace JLChnToZ.Katana.Runner {
             fieldType = FieldType.Unassigned;
             foreach(var child in block) {
                 result = runner.Eval(child, out fieldType);
-                var field = runner.GetField(child.Tag as string);
+                var field = runner.GetFieldOrInit(Convert.ToString(child));
                 if(field.FieldType == FieldType.BuiltInFunction &&
                     field.Value == index["return"])
                     return result;
@@ -158,7 +158,7 @@ namespace JLChnToZ.Katana.Runner {
                     ft == FieldType.Float || ft == FieldType.Integer ?
                         field[Convert.ToInt32(v)] :
                         field[Convert.ToString(v)] :
-                    runner.GetField(Convert.ToString(v));
+                    runner.GetFieldOrInit(Convert.ToString(v));
             }
             field.Value = new ScriptFunction(args, body);
             fieldType = field.FieldType;
@@ -174,7 +174,7 @@ namespace JLChnToZ.Katana.Runner {
                 var errArg = Convert.ToString(runner.Eval(block[1], out _));
                 try {
                     runner.PushContext();
-                    runner.GetField(errArg).Value = ex.Message;
+                    runner.GetFieldOrInit(errArg).Value = ex.Message;
                     object errResult = null;
                     fieldType = FieldType.Unassigned;
                     if(block.Count == 3)

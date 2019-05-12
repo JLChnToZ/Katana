@@ -13,10 +13,12 @@ namespace JLChnToZ.Katana.Runner {
         private readonly Stack<Dictionary<Node, SFieldState>> cacheStack =
             new Stack<Dictionary<Node, SFieldState>>();
         private readonly Node root;
+        private readonly Dictionary<string, FieldState> globalHeapStack =
+            new Dictionary<string, FieldState>();
 
         public Runner(Node root) {
             this.root = root;
-            PushContext();
+            heapStack.Push(globalHeapStack);
             PushCache();
         }
 
@@ -71,7 +73,8 @@ namespace JLChnToZ.Katana.Runner {
                 var node = lookupStack.Peek();
                 nextMap.TryGetValue(node, out int next);
                 var fn = GetField(Convert.ToString(node.Tag));
-                if(fn.FieldType == FieldType.BuiltInFunction &&
+                if(fn != null &&
+                    fn.FieldType == FieldType.BuiltInFunction &&
                     !(fn.Value as BuiltInFunction).enableDefer) {
                     PushCache();
                     cache[node] = fn.Call(this, node);
@@ -80,7 +83,7 @@ namespace JLChnToZ.Katana.Runner {
                     continue;
                 }
                 if(next >= node.Count) {
-                    cache[node] = EvalWithoutDigging(node);
+                    cache[node] = (fn?.Call(this, node)).GetValueOrDefault();
                     lookupStack.Pop();
                     continue;
                 }
@@ -91,22 +94,20 @@ namespace JLChnToZ.Katana.Runner {
             return null;
         }
 
-        private SFieldState EvalWithoutDigging(Node node) {
-            foreach(var fields in heapStack)
-                if(fields.TryGetValue(Convert.ToString(node.Tag), out var field))
-                    return field.Call(this, node);
-            return default;
+        internal FieldState GetField(string tag, bool forceLocal = false) {
+            if(heapStack.Peek().TryGetValue(tag, out FieldState field))
+                return field;
+            else if(!forceLocal && globalHeapStack.TryGetValue(tag, out field))
+                return field;
+            return null;
         }
 
-        internal FieldState GetField(string tag, bool forceLocal = false) {
-            FieldState field;
-            foreach(var fields in heapStack)
-                if(fields.TryGetValue(tag, out field))
-                    return field;
-                else if(forceLocal)
-                    break;
-            field = new FieldState();
-            heapStack.Peek()[tag] = field;
+        internal FieldState GetFieldOrInit(string tag, bool forceLocal = false) {
+            FieldState field = GetField(tag, forceLocal);
+            if(field == null) {
+                field = new FieldState();
+                heapStack.Peek()[tag] = field;
+            }
             return field;
         }
     }

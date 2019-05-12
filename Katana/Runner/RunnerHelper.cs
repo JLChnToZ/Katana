@@ -53,7 +53,7 @@ namespace JLChnToZ.Katana.Runner {
 
         public static void InstallBuiltin(this Runner runner) {
             foreach(var kv in BuiltinOperators.index)
-                runner.GetField(kv.Key).Value = kv.Value;
+                runner.GetFieldOrInit(kv.Key).Value = kv.Value;
         }
     }
 }

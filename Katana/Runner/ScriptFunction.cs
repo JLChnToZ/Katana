@@ -17,7 +17,7 @@ namespace JLChnToZ.Katana.Runner {
                 runner.PushContext();
                 for(int i = 0, l = arguments.Count; i < l; i++) {
                     var arg = Convert.ToString(runner.Eval(arguments[i], out _));
-                    runner.GetField(arg, true).Value = node.Count > i ?
+                    runner.GetFieldOrInit(arg, true).Value = node.Count > i ?
                         runner.Eval(node[i], out _) : null;
                 }
                 var value = runner.Eval(body, out var fieldType);
