@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using JLChnToZ.Katana.Expressions;
 
@@ -9,152 +10,189 @@ namespace JLChnToZ.Katana.Runner {
         Float,
         String,
         Object,
+        Array,
         Function,
         BuiltInFunction,
     }
 
-    public class FieldState {
-        private object value;
+    internal struct SFieldState {
+        public object value;
         public FieldType fieldType;
+    }
+
+    public class FieldState {
+        private SFieldState state;
+
+        public FieldType FieldType => state.fieldType;
+
+        internal SFieldState State => state;
 
         public object Value {
-            get => value;
+            get => state.value;
             set {
-                switch(Convert.GetTypeCode(value)) {
-                    case TypeCode.String:
-                        this.value = value;
-                        fieldType = FieldType.String;
-                        break;
-                    case TypeCode.DBNull:
-                    case TypeCode.DateTime:
-                    case TypeCode.Empty:
-                        this.value = null;
-                        fieldType = FieldType.Unassigned;
-                        break;
-                    case TypeCode.Object:
-                        if(value is Dictionary<string, FieldState>) {
-                            this.value = value;
-                            fieldType = FieldType.Object;
-                        }
-                        if(value is Node) {
-                            this.value = value;
-                            fieldType = FieldType.Function;
-                        }
-                        if(value is BuiltInFunction) {
-                            this.value = value;
-                            fieldType = FieldType.BuiltInFunction;
-                        }
-                        goto case TypeCode.Empty;
-                    case TypeCode.Single:
-                    case TypeCode.Double:
-                    case TypeCode.Decimal:
-                        this.value = Convert.ToDouble(value);
-                        fieldType = FieldType.Float;
+                switch(state.fieldType = RunnerHelper.GetFieldType(value)) {
+                    case FieldType.Unassigned:
+                        state.value = null;
                         break;
                     default:
-                        this.value = Convert.ToInt64(value);
-                        fieldType = FieldType.Integer;
+                        state.value = value;
                         break;
                 }
             }
         }
-        
-        public long GetIntegerValue(Runner runner) {
-            switch(fieldType) {
-                case FieldType.Integer:
-                case FieldType.Float:
-                    return Convert.ToInt64(value);
-                case FieldType.String:
-                    long.TryParse(value as string, out long x);
-                    return x;
-                default:
-                    throw new InvalidCastException();
+
+        public long IntValue {
+            get => Convert.ToInt64(state.value);
+            set {
+                state.fieldType = FieldType.Integer;
+                state.value = value;
             }
         }
 
-        public void SetIntegerValue(Runner runner, long value) {
-            fieldType = FieldType.Integer;
-            this.value = value;
-        }
-
-        public double GetFloatValue(Runner runner) {
-            switch(fieldType) {
-                case FieldType.Integer:
-                case FieldType.Float:
-                    return Convert.ToDouble(value);
-                case FieldType.String:
-                    long.TryParse(value as string, out long x);
-                    return x;
-                default:
-                    throw new InvalidCastException();
+        public double FloatValue {
+            get => Convert.ToDouble(state.value);
+            set {
+                state.fieldType = FieldType.Float;
+                state.value = value;
             }
         }
 
-        public void SetFloatValue(Runner runner, double value) {
-            fieldType = FieldType.Float;
-            this.value = value;
-        }
-
-        public string GetStringValue(Runner runner) {
-            switch(fieldType) {
-                case FieldType.String:
-                    return value as string;
-                case FieldType.Integer:
-                case FieldType.Float:
-                    return Convert.ToString(value);
-                default:
-                    throw new InvalidCastException();
+        public string StringValue {
+            get => Convert.ToString(state.value);
+            set {
+                state.fieldType = FieldType.String;
+                state.value = value;
             }
         }
 
-        public void SetStringValue(Runner runner, string value) {
-            fieldType = FieldType.String;
-            this.value = value;
-        }
-
-        public object Call(Runner runner, Node node) {
-            switch(fieldType) {
-                case FieldType.BuiltInFunction:
-                    return (value as BuiltInFunction).Invoke(runner, node);
-                case FieldType.Function:
-                    var fnBlock = value as Node;
-                    runner.Push();
-                    var args = fnBlock[fnBlock.Count - 2];
-                    for(int i = 0, l = args.Count; i < l; i++) {
-                        var arg = Convert.ToString(runner.Eval(args[i]));
-                        runner.GetField(arg, true).value = node.Count > i ?
-                            runner.Eval(node[i]) : null;
-                    }
-                    var result = runner.Eval(fnBlock[fnBlock.Count - 1]);
-                    runner.Pop();
-                    return result;
-                default:
-                    throw new InvalidCastException();
+        public FieldState this[string tag] {
+            get {
+                switch(state.fieldType) {
+                    case FieldType.Unassigned:
+                        state.fieldType = FieldType.Object;
+                        state.value = new Dictionary<string, FieldState>();
+                        goto case FieldType.Object;
+                    case FieldType.Object:
+                        return GetSubFieldUnchecked(tag);
+                    case FieldType.Array:
+                        if(!int.TryParse(tag, out int index))
+                            goto default;
+                        return GetSubFieldUnchecked(index);
+                    default:
+                        throw new InvalidCastException();
+                }
             }
         }
 
-        public void SetFunction(Runner runner, Node node) {
-            fieldType = FieldType.Function;
-            value = node;
+        public FieldState this[int index] {
+            get {
+                switch(state.fieldType) {
+                    case FieldType.Unassigned:
+                        state.fieldType = FieldType.Array;
+                        state.value = new List<FieldState>();
+                        goto case FieldType.Array;
+                    case FieldType.Object:
+                        var tag = index.ToString();
+                        return GetSubFieldUnchecked(tag);
+                    case FieldType.Array:
+                        return GetSubFieldUnchecked(index);
+                    default:
+                        throw new InvalidCastException();
+                }
+            }
         }
 
-        public void SetFunction(Runner runner, BuiltInFunction fn) {
-            fieldType = FieldType.Function;
-            value = fn;
+        public int Count {
+            get {
+                switch(state.fieldType) {
+                    case FieldType.String:
+                        return (state.value as string).Length;
+                    case FieldType.Array:
+                        return (state.value as List<FieldState>).Count;
+                    case FieldType.Object:
+                        return (state.value as Dictionary<string, FieldState>).Count;
+                    default:
+                        return 0;
+                }
+            }
         }
 
-        public FieldState GetSubField(Runner runner, string tag) {
-            var fields = value as Dictionary<string, FieldState>;
-            if(fieldType == FieldType.Unassigned) {
-                fieldType = FieldType.Object;
-                value = fields = new Dictionary<string, FieldState>();
-            } else if(fieldType != FieldType.Object)
-                throw new InvalidCastException();
+        public FieldState() { }
+
+        internal FieldState(SFieldState state) {
+            this.state = state;
+        }
+
+        public bool Has(string tag) {
+            switch(state.fieldType) {
+                case FieldType.Object:
+                    return (state.value as Dictionary<string, FieldState>).ContainsKey(tag);
+                case FieldType.Array:
+                    return int.TryParse(tag, out int index) &&
+                        index >= 0 &&
+                        index < (state.value as List<FieldState>).Count;
+                default:
+                    return false;
+            }
+        }
+
+        public bool Has(int index) {
+            switch(state.fieldType) {
+                case FieldType.Object:
+                    return (state.value as Dictionary<string, FieldState>).ContainsKey(index.ToString());
+                case FieldType.Array:
+                    return index >= 0 &&
+                        index < (state.value as List<FieldState>).Count;
+                default:
+                    return false;
+            }
+        }
+
+        private FieldState GetSubFieldUnchecked(string tag) {
+            var fields = state.value as Dictionary<string, FieldState>;
             if(!fields.TryGetValue(tag, out var field)) {
                 field = new FieldState();
                 fields[tag] = field;
             }
             return field;
+        }
+
+        private FieldState GetSubFieldUnchecked(int index) {
+            var fields = state.value as List<FieldState>;
+            FieldState field;
+            if(index > fields.Count) {
+                if(fields.Capacity < index + 1)
+                    fields.Capacity = index + 1;
+                while(fields.Count <= index)
+                    fields.Add(new FieldState());
+                field = new FieldState();
+                fields.Add(field);
+            } else {
+                if(index < 0)
+                    index = (index % fields.Count + fields.Count) % fields.Count;
+                field = fields[index];
+            }
+            return field;
+        }
+
+        internal SFieldState Call(Runner runner, Node node) {
+            switch(state.fieldType) {
+                case FieldType.BuiltInFunction:
+                case FieldType.Function:
+                    return (state.value as IFunction).Invoke(runner, node);
+                default:
+                    throw new InvalidCastException();
+            }
+        }
+
+        public void SetFunction(ScriptFunction fn) {
+            state.fieldType = FieldType.Function;
+            state.value = fn;
+        }
+
+        public void SetFunction(BuiltInFunction fn) {
+            state.fieldType = FieldType.BuiltInFunction;
+            state.value = fn;
         }
     }
 }
