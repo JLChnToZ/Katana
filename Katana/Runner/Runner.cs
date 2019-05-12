@@ -16,6 +16,17 @@ namespace JLChnToZ.Katana.Runner {
         private readonly Dictionary<string, FieldState> globalHeapStack =
             new Dictionary<string, FieldState>();
 
+        public object this[string key] {
+            get => globalHeapStack.TryGetValue(key, out var field) ? field.Value : null;
+            set {
+                if(!globalHeapStack.TryGetValue(key, out var field)) {
+                    field = new FieldState();
+                    globalHeapStack[key] = field;
+                }
+                field.Value = value;
+            }
+        }
+
         public Runner(Node root) {
             this.root = root;
             heapStack.Push(globalHeapStack);
