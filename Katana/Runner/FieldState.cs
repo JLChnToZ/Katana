@@ -180,7 +180,9 @@ namespace JLChnToZ.Katana.Runner {
                 case FieldType.Function:
                     return (state.value as IFunction).Invoke(runner, node);
                 default:
-                    throw new InvalidCastException();
+                    if(node.Count > 0)
+                        throw new InvalidCastException();
+                    return state;
             }
         }
 

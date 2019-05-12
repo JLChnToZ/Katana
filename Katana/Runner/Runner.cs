@@ -67,45 +67,45 @@ namespace JLChnToZ.Katana.Runner {
             unusedCache.Enqueue(cache);
         }
 
-        internal object Eval(Node block, out FieldType fieldType) {
+        public object Eval(Node block, out FieldType fieldType) {
             if(block.Count == 0) {
                 fieldType = RunnerHelper.GetFieldType(block.Tag);
                 return block.Tag;
             }
             var cache = cacheStack.Peek();
-            if(cache.TryGetValue(block, out var result)) {
-                fieldType = result.fieldType;
-                return result.value;
-            }
-            var nextMap = new Dictionary<Node, int>();
-            var lookupStack = new Stack<Node>();
-            lookupStack.Push(block);
-            while(lookupStack.Count > 0) {
-                var node = lookupStack.Peek();
-                nextMap.TryGetValue(node, out int next);
-                var fn = GetField(Convert.ToString(node.Tag));
-                if(fn != null &&
-                    fn.FieldType == FieldType.BuiltInFunction &&
-                    !(fn.Value as BuiltInFunction).enableDefer) {
-                    PushCache();
-                    cache[node] = fn.Call(this, node);
-                    PopCache();
-                    lookupStack.Pop();
-                    continue;
+            if(!cache.TryGetValue(block, out var result)) {
+                var nextMap = new Dictionary<Node, int>();
+                var lookupStack = new Stack<Node>();
+                lookupStack.Push(block);
+                while(lookupStack.Count > 0) {
+                    var node = lookupStack.Peek();
+                    nextMap.TryGetValue(node, out int next);
+                    var fn = GetField(Convert.ToString(node.Tag));
+                    if(fn != null &&
+                        fn.FieldType == FieldType.BuiltInFunction &&
+                        !(fn.Value as BuiltInFunction).enableDefer) {
+                        PushCache();
+                        cache[node] = fn.Call(this, node);
+                        PopCache();
+                        lookupStack.Pop();
+                        continue;
+                    }
+                    if(next >= node.Count) {
+                        cache[node] = (fn?.Call(this, node)).GetValueOrDefault();
+                        lookupStack.Pop();
+                        continue;
+                    }
+                    lookupStack.Push(node[next]);
+                    nextMap[node] = next + 1;
                 }
-                if(next >= node.Count) {
-                    cache[node] = (fn?.Call(this, node)).GetValueOrDefault();
-                    lookupStack.Pop();
-                    continue;
-                }
-                lookupStack.Push(node[next]);
-                nextMap[node] = next + 1;
-            }
-            fieldType = FieldType.Unassigned;
-            return null;
+                result = cache[block];
+            } else
+                cache.Remove(block);
+            fieldType = result.fieldType;
+            return result.value;
         }
 
-        internal FieldState GetField(string tag, bool forceLocal = false) {
+        public FieldState GetField(string tag, bool forceLocal = false) {
             if(heapStack.Peek().TryGetValue(tag, out FieldState field))
                 return field;
             else if(!forceLocal && globalHeapStack.TryGetValue(tag, out field))
@@ -113,7 +113,7 @@ namespace JLChnToZ.Katana.Runner {
             return null;
         }
 
-        internal FieldState GetFieldOrInit(string tag, bool forceLocal = false) {
+        public FieldState GetFieldOrInit(string tag, bool forceLocal = false) {
             FieldState field = GetField(tag, forceLocal);
             if(field == null) {
                 field = new FieldState();

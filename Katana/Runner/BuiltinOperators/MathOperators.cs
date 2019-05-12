@@ -32,8 +32,10 @@ namespace JLChnToZ.Katana.Runner {
                                 fieldType = FieldType.Array;
                                 resultList = v as List<FieldState>;
                                 break;
+                            default:
+                                throw new ArgumentException();
                         }
-                        goto default;
+                        break;
                     case FieldType.Array:
                         if(ft == FieldType.Array)
                             foreach(var entry in v as List<FieldState>)
