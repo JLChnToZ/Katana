@@ -12,7 +12,6 @@ $(
   function(factorial, (x), $(
     =(c, 1),
     =(y, 1),
-    print(format('y = {0}, c = {1}', @(y), @(c))),
     while(<=(@(c), @(x)), $(
       =(y, *(@(y), @(c))),
       =(c, +(@(c), 1))
