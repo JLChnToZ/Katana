@@ -551,13 +551,13 @@ namespace JLChnToZ.Katana.Runner {
         long IConvertible.ToInt64(IFormatProvider provider) {
             switch(fieldType) {
                 case FieldType.String:
-                    if(uint.TryParse(objValue as string, out var result))
+                    if(long.TryParse(objValue as string, out var result))
                         return result;
                     goto default;
                 case FieldType.Integer:
                     return intValue;
                 case FieldType.Float:
-                    return unchecked((int)floatValue);
+                    return unchecked((long)floatValue);
                 case FieldType.Unassigned:
                     return 0;
                 default:
