@@ -3,27 +3,26 @@ using JLChnToZ.Katana.Expressions;
 
 namespace JLChnToZ.Katana.Runner {
     public static partial class BuiltinOperators {
-        public static object Equals(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Equals(Runner runner, Node block) {
             if(block.Count < 2)
                 throw new ArgumentException();
             var compareFieldType = FieldType.Unassigned;
             string compareStr = null;
             double compareNum = double.NaN;
             object compareObj = null;
-            fieldType = FieldType.Integer;
             foreach(var child in block) {
-                var v = runner.Eval(child, out var ft);
+                var v = runner.Eval(child);
                 switch(compareFieldType) {
                     case FieldType.Unassigned:
-                        switch(ft) {
+                        switch(v.FieldType) {
                             case FieldType.String:
-                                compareFieldType = ft;
-                                compareStr = Convert.ToString(v);
+                                compareFieldType = FieldType.String;
+                                compareStr = v.StringValue;
                                 break;
                             case FieldType.Integer:
                             case FieldType.Float:
                                 compareFieldType = FieldType.Float;
-                                compareNum = Convert.ToDouble(v);
+                                compareNum = v.FloatValue;
                                 break;
                         }
                         compareFieldType = FieldType.Object;
@@ -38,7 +37,7 @@ namespace JLChnToZ.Katana.Runner {
                             return 0;
                         break;
                     case FieldType.Object:
-                        if(v != compareObj)
+                        if(v.Value != compareObj)
                             return 0;
                         break;
                     default:
@@ -55,22 +54,21 @@ namespace JLChnToZ.Katana.Runner {
             }
         }
 
-        public static object InEqauls(Runner runner, Node block, out FieldType fieldType) =>
-            1 - (int)Equals(runner, block, out fieldType);
+        public static Field InEqauls(Runner runner, Node block) =>
+            1 - (int)Equals(runner, block);
 
-        public static object GreaterThen(Runner runner, Node block, out FieldType fieldType) =>
-            1 - (int)LesserThenEquals(runner, block, out fieldType);
+        public static Field GreaterThen(Runner runner, Node block) =>
+            1 - (int)LesserThenEquals(runner, block);
 
-        public static object LesserThen(Runner runner, Node block, out FieldType fieldType) =>
-            1 - (int)GreaterThenEquals(runner, block, out fieldType);
+        public static Field LesserThen(Runner runner, Node block) =>
+            1 - (int)GreaterThenEquals(runner, block);
 
-        public static object GreaterThenEquals(Runner runner, Node block, out FieldType fieldType) {
+        public static Field GreaterThenEquals(Runner runner, Node block) {
             if(block.Count < 2)
                 throw new ArgumentException();
             double compareNum = double.PositiveInfinity;
-            fieldType = FieldType.Integer;
             foreach(var child in block) {
-                var v = Convert.ToDouble(runner.Eval(child, out _));
+                var v = runner.Eval(child).FloatValue;
                 if(compareNum < v)
                     return 0;
                 compareNum = v;
@@ -78,13 +76,12 @@ namespace JLChnToZ.Katana.Runner {
             return 1;
         }
 
-        public static object LesserThenEquals(Runner runner, Node block, out FieldType fieldType) {
+        public static Field LesserThenEquals(Runner runner, Node block) {
             if(block.Count < 2)
                 throw new ArgumentException();
             double compareNum = double.NegativeInfinity;
-            fieldType = FieldType.Integer;
             foreach(var child in block) {
-                var v = Convert.ToDouble(runner.Eval(child, out _));
+                var v = runner.Eval(child).FloatValue;
                 if(compareNum > v)
                     return 0;
                 compareNum = v;

@@ -7,21 +7,21 @@ namespace JLChnToZ.Katana.Runner {
     public static partial class BuiltinOperators {
 
         #region Basic
-        public static object Add(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Add(Runner runner, Node block) {
             if(block.Count < 2)
                 throw new ArgumentException();
-            fieldType = FieldType.Unassigned;
+            var fieldType = FieldType.Unassigned;
             StringBuilder resultStr = null;
             double? resultNum = null;
-            List<FieldState> resultList = null;
+            Field resultList = default;
             foreach(var child in block) {
-                var v = runner.Eval(child, out var ft);
+                var v = runner.Eval(child);
                 switch(fieldType) {
                     case FieldType.Unassigned:
-                        switch(ft) {
+                        switch(v.FieldType) {
                             case FieldType.String:
-                                fieldType = ft;
-                                resultStr = new StringBuilder(Convert.ToString(v));
+                                fieldType = FieldType.String;
+                                resultStr = new StringBuilder((string)v);
                                 break;
                             case FieldType.Integer:
                             case FieldType.Float:
@@ -30,21 +30,18 @@ namespace JLChnToZ.Katana.Runner {
                                 break;
                             case FieldType.Array:
                                 fieldType = FieldType.Array;
-                                resultList = v as List<FieldState>;
+                                resultList = v;
                                 break;
                             default:
                                 throw new ArgumentException();
                         }
                         break;
                     case FieldType.Array:
-                        if(ft == FieldType.Array)
-                            foreach(var entry in v as List<FieldState>)
-                                resultList.Add(new FieldState(entry.State));
+                        if(v.FieldType == FieldType.Array)
+                            foreach(var entry in v)
+                                resultList.Add(entry);
                         else
-                            resultList.Add(new FieldState(new SFieldState {
-                                value = v,
-                                fieldType = ft,
-                            }));
+                            resultList.Add(v);
                         break;
                     case FieldType.String:
                         resultStr.Append(v);
@@ -68,12 +65,12 @@ namespace JLChnToZ.Katana.Runner {
             }
         }
 
-        public static object Substract(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Substract(Runner runner, Node block) {
             if(block.Count < 1)
                 throw new ArgumentException();
             double? result = null;
             foreach(var child in block) {
-                var v = Convert.ToDouble(runner.Eval(child, out _));
+                var v = runner.Eval(child).FloatValue;
                 if(result.HasValue)
                     result += v;
                 else
@@ -81,326 +78,294 @@ namespace JLChnToZ.Katana.Runner {
             }
             if(block.Count > 1)
                 result = -result;
-            fieldType = FieldType.Float;
             return result.GetValueOrDefault(double.NaN);
         }
 
-        public static object Multiply(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Multiply(Runner runner, Node block) {
             if(block.Count < 2)
                 throw new ArgumentException();
             double? result = null;
             foreach(var child in block) {
-                var v = Convert.ToDouble(runner.Eval(child, out _));
+                var v = runner.Eval(child).FloatValue;
                 if(result.HasValue)
                     result *= v;
                 else
                     result = v;
             }
-            fieldType = FieldType.Float;
             return result.GetValueOrDefault(double.NaN);
         }
 
-        public static object Divide(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Divide(Runner runner, Node block) {
             if(block.Count < 2)
                 throw new ArgumentException();
             double? result = null;
             foreach(var child in block) {
-                var v = Convert.ToDouble(runner.Eval(child, out _));
+                var v = runner.Eval(child).FloatValue;
                 if(result.HasValue)
                     result /= v;
                 else
                     result = v;
             }
-            fieldType = FieldType.Float;
             return result.GetValueOrDefault(double.NaN);
         }
 
-        public static object Modulus(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Modulus(Runner runner, Node block) {
             if(block.Count < 2)
                 throw new ArgumentException();
             double? result = null;
             foreach(var child in block) {
-                var v = Convert.ToDouble(runner.Eval(child, out _));
+                var v = runner.Eval(child).FloatValue;
                 if(result.HasValue)
                     result %= v;
                 else
                     result = v;
             }
-            fieldType = FieldType.Float;
             return result.GetValueOrDefault(double.NaN);
         }
 
-        public static object Pow(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Pow(Runner runner, Node block) {
             if(block.Count < 2)
                 throw new ArgumentException();
             double? result = null;
             foreach(var child in block) {
-                var v = Convert.ToDouble(runner.Eval(child, out _));
+                var v = runner.Eval(child).FloatValue;
                 if(result.HasValue)
                     result = Math.Pow(result.Value, v);
                 else
                     result = v;
             }
-            fieldType = FieldType.Float;
-            return result;
+            return result.GetValueOrDefault(double.NaN);
         }
         #endregion
 
         #region Advanced
-        public static object Min(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Min(Runner runner, Node block) {
             if(block.Count < 2)
                 throw new ArgumentException();
             double result = double.PositiveInfinity;
             foreach(var child in block) {
-                var v = Convert.ToDouble(runner.Eval(child, out _));
+                var v = runner.Eval(child).FloatValue;
                 result = Math.Min(result, v);
             }
-            fieldType = FieldType.Float;
             return result;
         }
 
-        public static object Max(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Max(Runner runner, Node block) {
             if(block.Count < 2)
                 throw new ArgumentException();
             double result = double.NegativeInfinity;
             foreach(var child in block) {
-                var v = Convert.ToDouble(runner.Eval(child, out _));
+                var v = runner.Eval(child).FloatValue;
                 result = Math.Max(result, v);
             }
-            fieldType = FieldType.Float;
             return result;
         }
 
-        public static object Abs(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Abs(Runner runner, Node block) {
             if(block.Count != 1)
                 throw new ArgumentException();
-            var a = Convert.ToDouble(runner.Eval(block[0], out _));
-            fieldType = FieldType.Float;
+            var a = runner.Eval(block[0]).FloatValue;
             return Math.Abs(a);
         }
 
-        public static object Sign(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Sign(Runner runner, Node block) {
             if(block.Count != 1)
                 throw new ArgumentException();
-            var a = Convert.ToDouble(runner.Eval(block[0], out _));
-            fieldType = FieldType.Float;
+            var a = runner.Eval(block[0]).FloatValue;
             return Math.Sign(a);
         }
 
-        public static object Floor(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Floor(Runner runner, Node block) {
             if(block.Count != 1)
                 throw new ArgumentException();
-            var a = Convert.ToDouble(runner.Eval(block[0], out _));
-            fieldType = FieldType.Float;
+            var a = runner.Eval(block[0]).FloatValue;
             return Math.Floor(a);
         }
 
-        public static object Round(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Round(Runner runner, Node block) {
             if(block.Count != 1)
                 throw new ArgumentException();
-            var a = Convert.ToDouble(runner.Eval(block[0], out _));
-            fieldType = FieldType.Float;
+            var a = runner.Eval(block[0]).FloatValue;
             return Math.Round(a);
         }
 
-        public static object Ceil(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Ceil(Runner runner, Node block) {
             if(block.Count != 1)
                 throw new ArgumentException();
-            var a = Convert.ToDouble(runner.Eval(block[0], out _));
-            fieldType = FieldType.Float;
+            var a = runner.Eval(block[0]).FloatValue;
             return Math.Ceiling(a);
         }
 
-        public static object Truncate(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Truncate(Runner runner, Node block) {
             if(block.Count != 1)
                 throw new ArgumentException();
-            var a = Convert.ToDouble(runner.Eval(block[0], out _));
-            fieldType = FieldType.Float;
+            var a = runner.Eval(block[0]).FloatValue;
             return Math.Truncate(a);
         }
 
-        public static object Exp(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Exp(Runner runner, Node block) {
             if(block.Count != 1)
                 throw new ArgumentException();
-            var a = Convert.ToDouble(runner.Eval(block[0], out _));
-            fieldType = FieldType.Float;
+            var a = runner.Eval(block[0]).FloatValue;
             return Math.Exp(a);
         }
 
-        public static object Sqrt(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Sqrt(Runner runner, Node block) {
             if(block.Count != 1)
                 throw new ArgumentException();
-            var a = Convert.ToDouble(runner.Eval(block[0], out _));
-            fieldType = FieldType.Float;
+            var a = runner.Eval(block[0]).FloatValue;
             return Math.Sqrt(a);
         }
 
-        public static object Log(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Log(Runner runner, Node block) {
             if(block.Count < 1 || block.Count > 2)
                 throw new ArgumentException();
-            var a = Convert.ToDouble(runner.Eval(block[0], out _));
-            fieldType = FieldType.Float;
+            var a = runner.Eval(block[0]).FloatValue;
             if(block.Count == 2) {
-                var b = Convert.ToDouble(runner.Eval(block[1], out _));
+                var b = runner.Eval(block[1]).FloatValue;
                 return Math.Log(a, b);
             }
             return Math.Log(a);
         }
 
-        public static object Log10(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Log10(Runner runner, Node block) {
             if(block.Count != 1)
                 throw new ArgumentException();
-            var a = Convert.ToDouble(runner.Eval(block[0], out _));
-            fieldType = FieldType.Float;
+            var a = runner.Eval(block[0]).FloatValue;
             return Math.Log10(a);
         }
 
-        public static object Sin(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Sin(Runner runner, Node block) {
             if(block.Count != 1)
                 throw new ArgumentException();
-            var a = Convert.ToDouble(runner.Eval(block[0], out _));
-            fieldType = FieldType.Float;
+            var a = runner.Eval(block[0]).FloatValue;
             return Math.Sin(a);
         }
 
-        public static object Cos(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Cos(Runner runner, Node block) {
             if(block.Count != 1)
                 throw new ArgumentException();
-            var a = Convert.ToDouble(runner.Eval(block[0], out _));
-            fieldType = FieldType.Float;
+            var a = runner.Eval(block[0]).FloatValue;
             return Math.Cos(a);
         }
 
-        public static object Tan(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Tan(Runner runner, Node block) {
             if(block.Count != 1)
                 throw new ArgumentException();
-            var a = Convert.ToDouble(runner.Eval(block[0], out _));
-            fieldType = FieldType.Float;
+            var a = runner.Eval(block[0]).FloatValue;
             return Math.Tan(a);
         }
 
-        public static object Asin(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Asin(Runner runner, Node block) {
             if(block.Count != 1)
                 throw new ArgumentException();
-            var a = Convert.ToDouble(runner.Eval(block[0], out _));
-            fieldType = FieldType.Float;
+            var a = runner.Eval(block[0]).FloatValue;
             return Math.Asin(a);
         }
 
-        public static object Acos(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Acos(Runner runner, Node block) {
             if(block.Count != 1)
                 throw new ArgumentException();
-            var a = Convert.ToDouble(runner.Eval(block[0], out _));
-            fieldType = FieldType.Float;
+            var a = runner.Eval(block[0]).FloatValue;
             return Math.Acos(a);
         }
 
-        public static object Atan(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Atan(Runner runner, Node block) {
             if(block.Count < 1 || block.Count > 2)
                 throw new ArgumentException();
-            var a = Convert.ToDouble(runner.Eval(block[0], out _));
-            fieldType = FieldType.Float;
+            var a = runner.Eval(block[0]).FloatValue;
             if(block.Count == 2) {
-                var b = Convert.ToDouble(runner.Eval(block[1], out _));
+                var b = runner.Eval(block[1]).FloatValue;
                 return Math.Atan2(a, b);
             }
             return Math.Atan(a);
         }
 
-        public static object Sinh(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Sinh(Runner runner, Node block) {
             if(block.Count != 1)
                 throw new ArgumentException();
-            var a = Convert.ToDouble(runner.Eval(block[0], out _));
-            fieldType = FieldType.Float;
+            var a = runner.Eval(block[0]).FloatValue;
             return Math.Sinh(a);
         }
 
-        public static object Cosh(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Cosh(Runner runner, Node block) {
             if(block.Count != 1)
                 throw new ArgumentException();
-            var a = Convert.ToDouble(runner.Eval(block[0], out _));
-            fieldType = FieldType.Float;
+            var a = runner.Eval(block[0]).FloatValue;
             return Math.Cosh(a);
         }
 
-        public static object Tanh(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Tanh(Runner runner, Node block) {
             if(block.Count != 1)
                 throw new ArgumentException();
-            var a = Convert.ToDouble(runner.Eval(block[0], out _));
-            fieldType = FieldType.Float;
+            var a = runner.Eval(block[0]).FloatValue;
             return Math.Tanh(a);
         }
         #endregion
 
         #region Bitwise
-        public static object And(Runner runner, Node block, out FieldType fieldType) {
+        public static Field And(Runner runner, Node block) {
             if(block.Count < 2)
                 throw new ArgumentException();
             long? result = null;
             foreach(var child in block) {
-                var v = Convert.ToInt64(runner.Eval(child, out _));
+                var v = runner.Eval(child).IntValue;
                 if(result.HasValue)
                     result &= v;
                 else
                     result = v;
             }
-            fieldType = FieldType.Integer;
             return result.GetValueOrDefault(0);
         }
 
-        public static object Or(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Or(Runner runner, Node block) {
             if(block.Count < 2)
                 throw new ArgumentException();
             long? result = null;
             foreach(var child in block) {
-                var v = Convert.ToInt64(runner.Eval(child, out _));
+                var v = runner.Eval(child).IntValue;
                 if(result.HasValue)
                     result |= v;
                 else
                     result = v;
             }
-            fieldType = FieldType.Integer;
             return result.GetValueOrDefault(0);
         }
 
-        public static object Xor(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Xor(Runner runner, Node block) {
             if(block.Count < 2)
                 throw new ArgumentException();
             long? result = null;
             foreach(var child in block) {
-                var v = Convert.ToInt64(runner.Eval(child, out _));
+                var v = runner.Eval(child).IntValue;
                 if(result.HasValue)
                     result ^= v;
                 else
                     result = v;
             }
-            fieldType = FieldType.Integer;
             return result.GetValueOrDefault(0);
         }
 
-        public static object Not(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Not(Runner runner, Node block) {
             if(block.Count != 1)
                 throw new ArgumentException();
-            var a = Convert.ToInt64(runner.Eval(block[0], out _));
-            fieldType = FieldType.Integer;
+            var a = runner.Eval(block[0]).IntValue;
             return (~a) & RunnerHelper.MAX_SAFE_INTEGER;
         }
 
-        public static object ShiftLeft(Runner runner, Node block, out FieldType fieldType) {
+        public static Field ShiftLeft(Runner runner, Node block) {
             if(block.Count != 2)
                 throw new ArgumentException();
-            var a = Convert.ToInt64(runner.Eval(block[0], out _));
-            var b = Convert.ToInt32(runner.Eval(block[1], out _));
-            fieldType = FieldType.Integer;
+            var a = runner.Eval(block[0]).IntValue;
+            var b = (int)runner.Eval(block[1]);
             return (a << b) & RunnerHelper.MAX_SAFE_INTEGER;
         }
 
-        public static object ShiftRight(Runner runner, Node block, out FieldType fieldType) {
+        public static Field ShiftRight(Runner runner, Node block) {
             if(block.Count != 2)
                 throw new ArgumentException();
-            var a = Convert.ToInt64(runner.Eval(block[0], out _));
-            var b = Convert.ToInt32(runner.Eval(block[1], out _));
-            fieldType = FieldType.Integer;
+            var a = runner.Eval(block[0]).IntValue;
+            var b = (int)runner.Eval(block[1]);
             return (a >> b) & RunnerHelper.MAX_SAFE_INTEGER;
         }
         #endregion

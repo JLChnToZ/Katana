@@ -5,64 +5,50 @@ using JLChnToZ.Katana.Expressions;
 namespace JLChnToZ.Katana.Runner {
     public static partial class BuiltinOperators {
 
-        public static object GetValue(Runner runner, Node block, out FieldType fieldType) {
+        public static Field GetValue(Runner runner, Node block) {
             if(block.Count < 1)
                 throw new ArgumentException();
-            FieldState field = null;
+            Field? field = null;
             foreach(var child in block) {
-                var v = runner.Eval(child, out var ft);
-                field = field != null ?
-                    ft == FieldType.Float || ft == FieldType.Integer ?
-                        field[Convert.ToInt32(v)] :
-                        field[Convert.ToString(v)] :
-                    runner.GetFieldOrInit(Convert.ToString(v));
+                var v = runner.Eval(child);
+                field = field.HasValue ? v[v] :
+                    runner.GetFieldOrInit((string)v);
             }
-            fieldType = field.FieldType;
-            return field.Value;
+            return field.GetValueOrDefault();
         }
 
-        public static object SetValue(Runner runner, Node block, out FieldType fieldType) {
+        public static Field SetValue(Runner runner, Node block) {
             if(block.Count < 2)
                 throw new ArgumentException();
-            FieldState field = null;
-            var lastChild = block[block.Count - 1];
-            foreach(var child in block) {
-                var v = runner.Eval(child, out var ft);
-                if(child == lastChild)
-                    field.Value = v;
-                else
-                    field = field != null ?
-                        ft == FieldType.Float || ft == FieldType.Integer ?
-                            field[Convert.ToInt32(v)] :
-                            field[Convert.ToString(v)] :
-                        runner.GetFieldOrInit(Convert.ToString(v));
-            }
-            fieldType = field.FieldType;
-            return field.Value;
+            var tag = Convert.ToString(block[0].Tag);
+            if(block.Count == 2)
+                return runner.SetField(tag, runner.Eval(block[1]));
+            Field field = runner.GetFieldOrInit(tag);
+            for(int i = 1, l = block.Count - 2; i < l; i++)
+                field = field[runner.Eval(block[i])];
+            return field[runner.Eval(block[block.Count - 2])] =
+                runner.Eval(block[block.Count - 1]);
         }
 
-        public static object Length(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Length(Runner runner, Node block) {
             if(block.Count != 1)
                 throw new ArgumentException();
-            var obj = runner.Eval(block[1], out var ft);
-            fieldType = FieldType.Integer;
-            switch(ft) {
+            var obj = runner.Eval(block[1]);
+            switch(obj.FieldType) {
                 case FieldType.String:
-                    return (obj as string).Length;
+                    return obj.StringValue.Length;
                 case FieldType.Array:
                 case FieldType.Object:
-                    return (obj as ICollection).Count;
+                    return obj.Count;
                 default:
                     return 0;
             }
         }
 
-        public static object TypeOf(Runner runner, Node block, out FieldType fieldType) {
+        public static Field TypeOf(Runner runner, Node block) {
             if(block.Count != 1)
                 throw new ArgumentException();
-            runner.Eval(block[1], out var ft);
-            fieldType = FieldType.String;
-            switch(ft) {
+            switch(runner.Eval(block[1]).FieldType) {
                 case FieldType.Unassigned: return "undefined";
                 case FieldType.Integer: return "integer";
                 case FieldType.Float: return "float";
@@ -75,13 +61,12 @@ namespace JLChnToZ.Katana.Runner {
             }
         }
 
-        public static object RunSequence(Runner runner, Node block, out FieldType fieldType) {
+        public static Field RunSequence(Runner runner, Node block) {
             if(block.Count < 1)
                 throw new ArgumentException();
-            object result = null;
-            fieldType = FieldType.Unassigned;
+            Field result = default;
             foreach(var child in block) {
-                result = runner.Eval(child, out fieldType);
+                result = runner.Eval(child);
                 var field = runner.GetFieldOrInit(Convert.ToString(child));
                 if(field.FieldType == FieldType.BuiltInFunction &&
                     field.Value == index["return"])
@@ -90,95 +75,80 @@ namespace JLChnToZ.Katana.Runner {
             return result;
         }
 
-        public static object AndThen(Runner runner, Node block, out FieldType fieldType) {
+        public static Field AndThen(Runner runner, Node block) {
             if(block.Count < 1)
                 throw new ArgumentException();
-            object result = null;
-            fieldType = FieldType.Unassigned;
+            Field result = default;
             foreach(var child in block) {
-                var nextResult = runner.Eval(child, out fieldType);
-                if(!RunnerHelper.IsTruly(nextResult))
+                var nextResult = runner.Eval(child);
+                if(!nextResult.IsTruly)
                     return nextResult;
                 result = nextResult;
             }
             return result;
         }
 
-        public static object OrElse(Runner runner, Node block, out FieldType fieldType) {
+        public static Field OrElse(Runner runner, Node block) {
             if(block.Count < 1)
                 throw new ArgumentException();
-            object result = null;
-            fieldType = FieldType.Unassigned;
+            Field result = default;
             foreach(var child in block) {
-                var nextResult = runner.Eval(child, out fieldType);
-                if(RunnerHelper.IsTruly(nextResult))
+                var nextResult = runner.Eval(child);
+                if(nextResult.IsTruly)
                     return nextResult;
                 result = nextResult;
             }
             return result;
         }
 
-        public static object Return(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Return(Runner runner, Node block) {
             if(block.Count > 1)
                 throw new ArgumentException();
-            fieldType = FieldType.Unassigned;
-            return block.Count == 1 ? runner.Eval(block[0], out fieldType) : null;
+            return block.Count == 1 ? runner.Eval(block[0]) : default;
         }
 
-        public static object If(Runner runner, Node block, out FieldType fieldType) {
+        public static Field If(Runner runner, Node block) {
             if(block.Count < 2 || block.Count > 3)
                 throw new ArgumentException();
-            if(RunnerHelper.IsTruly(runner.Eval(block[0], out _)))
-                return runner.Eval(block[1], out fieldType);
+            if(runner.Eval(block[0]).IsTruly)
+                return runner.Eval(block[1]);
             else if(block.Count == 3)
-                return runner.Eval(block[2], out fieldType);
-            fieldType = FieldType.Unassigned;
-            return null;
+                return runner.Eval(block[2]);
+            return default;
         }
 
-        public static object While(Runner runner, Node block, out FieldType fieldType) {
+        public static Field While(Runner runner, Node block) {
             if(block.Count < 2)
                 throw new ArgumentException();
-            object result = null;
-            fieldType = FieldType.Unassigned;
-            while(RunnerHelper.IsTruly(runner.Eval(block[0], out _)))
-                result = runner.Eval(block[1], out fieldType);
+            Field result = default;
+            while(runner.Eval(block[0]).IsTruly)
+                result = runner.Eval(block[1]);
             return result;
         }
 
-        public static object Function(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Function(Runner runner, Node block) {
             if(block.Count < 3)
                 throw new ArgumentException();
-            FieldState field = null;
-            var args = block[block.Count - 2];
-            var body = block[block.Count - 1];
-            for(int i = 0, l = block.Count - 2; i < l; i++) {
-                var v = runner.Eval(block[i], out var ft);
-                field = field != null ?
-                    ft == FieldType.Float || ft == FieldType.Integer ?
-                        field[Convert.ToInt32(v)] :
-                        field[Convert.ToString(v)] :
-                    runner.GetFieldOrInit(Convert.ToString(v));
-            }
-            field.Value = new ScriptFunction(args, body);
-            fieldType = field.FieldType;
-            return field.Value;
+            Field field = runner.GetFieldOrInit(Convert.ToString(block[0].Tag));
+            for(int i = 1, l = block.Count - 2; i < l; i++)
+                field = field[runner.Eval(block[i])];
+            return field[runner.Eval(block[block.Count - 3])] =
+                new ScriptFunction(block[block.Count - 2], block[block.Count - 1]);
         }
 
-        public static object Try(Runner runner, Node block, out FieldType fieldType) {
+        public static Field Try(Runner runner, Node block) {
             if(block.Count != 1 && block.Count != 3)
                 throw new ArgumentException();
             try {
-                return runner.Eval(block[0], out fieldType);
+                return runner.Eval(block[0]);
             } catch(Exception ex) {
-                var errArg = Convert.ToString(runner.Eval(block[1], out _));
+                var errArg = (string)runner.Eval(block[1]);
                 try {
                     runner.PushContext();
-                    runner.GetFieldOrInit(errArg).Value = ex.Message;
-                    object errResult = null;
-                    fieldType = FieldType.Unassigned;
+                    runner.SetField(errArg, ex.Message, true);
+                    Field errResult = default;
                     if(block.Count == 3)
-                        errResult = runner.Eval(block[2], out fieldType);
+                        errResult = runner.Eval(block[2]);
                     return errResult;
                 } finally {
                     runner.PopContext();

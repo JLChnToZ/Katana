@@ -4,23 +4,23 @@ using JLChnToZ.Katana.Expressions;
 
 namespace JLChnToZ.Katana.Runner {
     public class Runner {
-        private static readonly Queue<Dictionary<string, FieldState>> unusedHeap =
-            new Queue<Dictionary<string, FieldState>>();
-        private static readonly Queue<Dictionary<Node, SFieldState>> unusedCache =
-            new Queue<Dictionary<Node, SFieldState>>();
-        private readonly Stack<Dictionary<string, FieldState>> heapStack =
-            new Stack<Dictionary<string, FieldState>>();
-        private readonly Stack<Dictionary<Node, SFieldState>> cacheStack =
-            new Stack<Dictionary<Node, SFieldState>>();
+        private static readonly Queue<Dictionary<string, Field>> unusedHeap =
+            new Queue<Dictionary<string, Field>>();
+        private static readonly Queue<Dictionary<Node, Field>> unusedCache =
+            new Queue<Dictionary<Node, Field>>();
+        private readonly Stack<Dictionary<string, Field>> heapStack =
+            new Stack<Dictionary<string, Field>>();
+        private readonly Stack<Dictionary<Node, Field>> cacheStack =
+            new Stack<Dictionary<Node, Field>>();
         private readonly Node root;
-        private readonly Dictionary<string, FieldState> globalHeapStack =
-            new Dictionary<string, FieldState>();
+        private readonly Dictionary<string, Field> globalHeapStack =
+            new Dictionary<string, Field>();
 
         public object this[string key] {
             get => globalHeapStack.TryGetValue(key, out var field) ? field.Value : null;
             set {
                 if(!globalHeapStack.TryGetValue(key, out var field)) {
-                    field = new FieldState();
+                    field = default;
                     globalHeapStack[key] = field;
                 }
                 field.Value = value;
@@ -38,14 +38,14 @@ namespace JLChnToZ.Katana.Runner {
         }
 
         public object Run() {
-            return Eval(root, out _);
+            return Eval(root).Value;
         }
 
         internal void PushContext() {
             if(unusedHeap.Count > 0)
                 heapStack.Push(unusedHeap.Dequeue());
             else
-                heapStack.Push(new Dictionary<string, FieldState>());
+                heapStack.Push(new Dictionary<string, Field>());
         }
 
         internal void PopContext() {
@@ -58,7 +58,7 @@ namespace JLChnToZ.Katana.Runner {
             if(unusedCache.Count > 0)
                 cacheStack.Push(unusedCache.Dequeue());
             else
-                cacheStack.Push(new Dictionary<Node, SFieldState>());
+                cacheStack.Push(new Dictionary<Node, Field>());
         }
 
         internal void PopCache() {
@@ -67,10 +67,9 @@ namespace JLChnToZ.Katana.Runner {
             unusedCache.Enqueue(cache);
         }
 
-        public object Eval(Node block, out FieldType fieldType) {
+        public Field Eval(Node block) {
             if(block.Count == 0) {
-                fieldType = RunnerHelper.GetFieldType(block.Tag);
-                return block.Tag;
+                return new Field(block.Tag);
             }
             var cache = cacheStack.Peek();
             if(!cache.TryGetValue(block, out var result)) {
@@ -80,8 +79,8 @@ namespace JLChnToZ.Katana.Runner {
                 while(lookupStack.Count > 0) {
                     var node = lookupStack.Peek();
                     nextMap.TryGetValue(node, out int next);
-                    var fn = GetField(Convert.ToString(node.Tag));
-                    if(fn != null &&
+                    var hasFn = TryGetField(Convert.ToString(node.Tag), out var fn);
+                    if(hasFn &&
                         fn.FieldType == FieldType.BuiltInFunction &&
                         !(fn.Value as BuiltInFunction).enableDefer) {
                         PushCache();
@@ -91,7 +90,7 @@ namespace JLChnToZ.Katana.Runner {
                         continue;
                     }
                     if(next >= node.Count) {
-                        cache[node] = (fn?.Call(this, node)).GetValueOrDefault();
+                        cache[node] = hasFn ? fn.Call(this, node) : default;
                         lookupStack.Pop();
                         continue;
                     }
@@ -101,25 +100,30 @@ namespace JLChnToZ.Katana.Runner {
                 result = cache[block];
             } else
                 cache.Remove(block);
-            fieldType = result.fieldType;
-            return result.value;
+            return result;
         }
 
-        public FieldState GetField(string tag, bool forceLocal = false) {
-            if(heapStack.Peek().TryGetValue(tag, out FieldState field))
-                return field;
+        public bool TryGetField(string tag, out Field field, bool forceLocal = false) {
+            if(heapStack.Peek().TryGetValue(tag, out field))
+                return true;
             else if(!forceLocal && globalHeapStack.TryGetValue(tag, out field))
-                return field;
-            return null;
+                return true;
+            return false;
         }
 
-        public FieldState GetFieldOrInit(string tag, bool forceLocal = false) {
-            FieldState field = GetField(tag, forceLocal);
-            if(field == null) {
-                field = new FieldState();
+        public Field GetFieldOrInit(string tag, bool forceLocal = false) {
+            if(!TryGetField(tag, out Field field, forceLocal))
                 heapStack.Peek()[tag] = field;
-            }
             return field;
+        }
+
+        public Field SetField(string tag, Field value, bool foreceLocal = false) {
+            var localHeap = heapStack.Peek();
+            if(localHeap.ContainsKey(tag) || foreceLocal)
+                localHeap[tag] = value;
+            else
+                globalHeapStack[tag] = value;
+            return value;
         }
     }
 }

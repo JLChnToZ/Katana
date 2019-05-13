@@ -3,7 +3,7 @@ using JLChnToZ.Katana.Expressions;
 
 namespace JLChnToZ.Katana.Runner {
     public class BuiltInFunction: IFunction {
-        public delegate object Exec(Runner runner, Node node, out FieldType fieldType);
+        public delegate Field Exec(Runner runner, Node node);
 
         public readonly Exec exec;
         public readonly bool enableDefer;
@@ -13,12 +13,8 @@ namespace JLChnToZ.Katana.Runner {
             this.enableDefer = enableDefer;
         }
 
-        SFieldState IFunction.Invoke(Runner runner, Node node) {
-            var value = exec.Invoke(runner, node, out var fieldType);
-            return new SFieldState {
-                value = value,
-                fieldType = fieldType,
-            };
+        Field IFunction.Invoke(Runner runner, Node node) {
+            return exec.Invoke(runner, node);
         }
     }
 }

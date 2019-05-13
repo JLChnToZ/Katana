@@ -4,27 +4,11 @@ using JLChnToZ.Katana.Expressions;
 
 namespace JLChnToZ.Katana.Runner {
     internal interface IFunction {
-        SFieldState Invoke(Runner runner, Node node);
+        Field Invoke(Runner runner, Node node);
     }
 
     public static class RunnerHelper {
         public const long MAX_SAFE_INTEGER = (1L << 53) - 1;
-
-        public static bool IsTruly(object obj) {
-            switch(Convert.GetTypeCode(obj)) {
-                case TypeCode.String:
-                    return !string.IsNullOrEmpty(Convert.ToString(obj));
-                case TypeCode.Object:
-                case TypeCode.DateTime:
-                    return true;
-                case TypeCode.Empty:
-                case TypeCode.DBNull:
-                    return false;
-                default:
-                    var compare = Convert.ToDouble(obj);
-                    return compare != 0 && !double.IsNaN(compare);
-            }
-        }
 
         public static FieldType GetFieldType(object value) {
             switch(Convert.GetTypeCode(value)) {
@@ -35,8 +19,10 @@ namespace JLChnToZ.Katana.Runner {
                 case TypeCode.Empty:
                     return FieldType.Unassigned;
                 case TypeCode.Object:
-                    if(value is Dictionary<string, FieldState>)
+                    if(value is Dictionary<string, Field>)
                         return FieldType.Object;
+                    if(value is List<Field>)
+                        return FieldType.Array;
                     if(value is ScriptFunction)
                         return FieldType.Function;
                     if(value is BuiltInFunction)
