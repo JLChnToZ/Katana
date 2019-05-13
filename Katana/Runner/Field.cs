@@ -681,7 +681,6 @@ namespace JLChnToZ.Katana.Runner {
             switch(fieldType) {
                 case FieldType.Object:
                     return HashValue.ContainsValue(item);
-                case FieldType.Unassigned:
                 case FieldType.Array:
                     return ListValue.Contains(item);
                 case FieldType.String:
@@ -706,7 +705,6 @@ namespace JLChnToZ.Katana.Runner {
 
         public bool ContainsKey(string key) {
             switch(fieldType) {
-                case FieldType.Unassigned:
                 case FieldType.Object:
                     return HashValue.ContainsKey(key);
                 case FieldType.Array:
@@ -720,7 +718,6 @@ namespace JLChnToZ.Katana.Runner {
 
         public int IndexOf(Field item) {
             switch(fieldType) {
-                case FieldType.Unassigned:
                 case FieldType.Array:
                     return ListValue.IndexOf(item);
                 case FieldType.String:
@@ -739,7 +736,6 @@ namespace JLChnToZ.Katana.Runner {
 
         public void Add(Field item) {
             switch(fieldType) {
-                case FieldType.Unassigned:
                 case FieldType.Array:
                     ListValue.Add(item);
                     break;
@@ -750,9 +746,11 @@ namespace JLChnToZ.Katana.Runner {
         public void Add(string key, Field value) {
             switch(fieldType) {
                 case FieldType.Array:
-
+                    if(int.TryParse(key, out int index) && EnsuereRange(ref index))
+                        ListValue[index] = value;
+                    else
+                        throw new IndexOutOfRangeException();
                     break;
-                case FieldType.Unassigned:
                 case FieldType.Object:
                     HashValue.Add(key, value);
                     break;
@@ -779,7 +777,6 @@ namespace JLChnToZ.Katana.Runner {
 
         public bool TryGetValue(string key, out Field value) {
             switch(fieldType) {
-                case FieldType.Unassigned:
                 case FieldType.Object:
                     return HashValue.TryGetValue(key, out value);
                 case FieldType.Array:
@@ -797,7 +794,6 @@ namespace JLChnToZ.Katana.Runner {
 
         public bool Remove(Field item) {
             switch(fieldType) {
-                case FieldType.Unassigned:
                 case FieldType.Array:
                     return ListValue.Remove(item);
                 default:
@@ -807,7 +803,6 @@ namespace JLChnToZ.Katana.Runner {
 
         public bool Remove(string key) {
             switch(fieldType) {
-                case FieldType.Unassigned:
                 case FieldType.Object:
                     return HashValue.Remove(key);
                 case FieldType.Array:
@@ -825,10 +820,19 @@ namespace JLChnToZ.Katana.Runner {
                 case FieldType.Object:
                     HashValue.Remove(index.ToString());
                     break;
-                case FieldType.Unassigned:
                 case FieldType.Array:
                     EnsuereRange(ref index);
                     ListValue.RemoveAt(index);
+                    break;
+                default:
+                    throw new NotSupportedException();
+            }
+        }
+
+        public void RemoveRange(int index, int count) {
+            switch(fieldType) {
+                case FieldType.Array:
+                    ListValue.RemoveRange(index, count);
                     break;
                 default:
                     throw new NotSupportedException();
@@ -859,7 +863,6 @@ namespace JLChnToZ.Katana.Runner {
                 case FieldType.Object:
                     HashValue.Values.CopyTo(array, arrayIndex);
                     break;
-                case FieldType.Unassigned:
                 case FieldType.Array:
                     ListValue.CopyTo(array, arrayIndex);
                     break;

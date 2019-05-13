@@ -69,6 +69,7 @@ namespace JLChnToZ.Katana.Runner {
                 ["slice"] = new BuiltInFunction(Slice, true),
                 ["length"] = new BuiltInFunction(Length, true),
                 ["any"] = new BuiltInFunction(Any, true),
+                ["delete"] = new BuiltInFunction(Delete, true),
 
                 // ["#"] = ...,
             };
