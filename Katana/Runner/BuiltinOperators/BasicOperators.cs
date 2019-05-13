@@ -8,13 +8,11 @@ namespace JLChnToZ.Katana.Runner {
         public static Field GetValue(Runner runner, Node block) {
             if(block.Count < 1)
                 throw new ArgumentException();
-            Field? field = null;
-            foreach(var child in block) {
-                var v = runner.Eval(child);
-                field = field.HasValue ? v[v] :
-                    runner.GetFieldOrInit((string)v);
-            }
-            return field.GetValueOrDefault();
+            var tag = Convert.ToString(block[0].Tag);
+            Field field = runner.GetFieldOrInit(tag);
+            for(int i = 1, l = block.Count - 1; i < l; i++)
+                field = field.GetAndEnsureType(runner.Eval(block[i]), FieldType.Object);
+            return field;
         }
 
         public static Field SetValue(Runner runner, Node block) {
@@ -25,7 +23,7 @@ namespace JLChnToZ.Katana.Runner {
                 return runner.SetField(tag, runner.Eval(block[1]));
             Field field = runner.GetFieldOrInit(tag);
             for(int i = 1, l = block.Count - 2; i < l; i++)
-                field = field[runner.Eval(block[i])];
+                field = field.GetAndEnsureType(runner.Eval(block[i]), FieldType.Object);
             return field[runner.Eval(block[block.Count - 2])] =
                 runner.Eval(block[block.Count - 1]);
         }
@@ -129,11 +127,16 @@ namespace JLChnToZ.Katana.Runner {
         public static Field Function(Runner runner, Node block) {
             if(block.Count < 3)
                 throw new ArgumentException();
-            Field field = runner.GetFieldOrInit(Convert.ToString(block[0].Tag));
-            for(int i = 1, l = block.Count - 2; i < l; i++)
-                field = field[runner.Eval(block[i])];
-            return field[runner.Eval(block[block.Count - 3])] =
-                new ScriptFunction(block[block.Count - 2], block[block.Count - 1]);
+            var tag = Convert.ToString(block[0].Tag);
+            var result = new ScriptFunction(
+                block[block.Count - 2],
+                block[block.Count - 1]);
+            if(block.Count == 3)
+                return runner.SetField(tag, result);
+            Field field = runner.GetFieldOrInit(tag);
+            for(int i = 1, l = block.Count - 3; i < l; i++)
+                field = field.GetAndEnsureType(runner.Eval(block[i]), FieldType.Object);
+            return field[runner.Eval(block[block.Count - 3])] = result;
         }
 
         public static Field Try(Runner runner, Node block) {

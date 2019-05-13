@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using JLChnToZ.Katana.Expressions;
 
 namespace JLChnToZ.Katana.Runner {
-    internal interface IFunction {
+    public interface IFunction {
         Field Invoke(Runner runner, Node node);
     }
 

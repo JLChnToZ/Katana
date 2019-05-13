@@ -5,7 +5,7 @@ using System.Linq;
 using JLChnToZ.Katana.Expressions;
 
 namespace JLChnToZ.Katana.Runner {
-    public struct Field: IConvertible, IEquatable<Field>, IList<Field>, IDictionary<string, Field> {
+    public struct Field: IEquatable<Field>, IConvertible, IFormattable, IFunction, IList<Field>, IDictionary<string, Field> {
         private object value;
         private FieldType fieldType;
 
@@ -147,7 +147,7 @@ namespace JLChnToZ.Katana.Runner {
                     case FieldType.Float:
                         return this[(int)field];
                     case FieldType.String:
-                        return this[(string)field];
+                        return this[field.StringValue];
                     default:
                         throw new InvalidCastException();
                 }
@@ -159,7 +159,7 @@ namespace JLChnToZ.Katana.Runner {
                         this[(int)field] = value;
                         break;
                     case FieldType.String:
-                        this[(string)field] = value;
+                        this[field.StringValue] = value;
                         break;
                     default:
                         throw new InvalidCastException();
@@ -205,6 +205,21 @@ namespace JLChnToZ.Katana.Runner {
             get => (this as IConvertible).ToBoolean(null);
         }
 
+        public Field GetAndEnsureType(Field key, FieldType type) {
+            var result = this[key];
+            switch(type) {
+                case FieldType.Array:
+                    if(result.fieldType == FieldType.Unassigned)
+                        this[key] = result = new Field(new List<Field>());
+                    break;
+                case FieldType.Object:
+                    if(result.fieldType == FieldType.Unassigned)
+                        this[key] = result = new Field(new Dictionary<string, Field>());
+                    break;
+            }
+            return result;
+        }
+
         public ICollection<string> Keys {
             get {
                 switch(fieldType) {
@@ -233,11 +248,6 @@ namespace JLChnToZ.Katana.Runner {
         internal Field(object value) {
             this.value = value;
             fieldType = RunnerHelper.GetFieldType(value);
-        }
-
-        internal Field(object value, FieldType fieldType) {
-            this.value = value;
-            this.fieldType = fieldType;
         }
 
         public Field(string value) {
@@ -321,7 +331,7 @@ namespace JLChnToZ.Katana.Runner {
         #endregion
 
         #region Callable
-        public Field Call(Runner runner, Node node) {
+        public Field Invoke(Runner runner, Node node) {
             switch(fieldType) {
                 case FieldType.BuiltInFunction:
                 case FieldType.Function:
@@ -331,7 +341,6 @@ namespace JLChnToZ.Katana.Runner {
                         throw new InvalidCastException();
                     return this;
             }
-
         }
         #endregion
 
@@ -581,7 +590,22 @@ namespace JLChnToZ.Katana.Runner {
             }
         }
 
-        string IConvertible.ToString(IFormatProvider provider) {
+        public override string ToString() {
+            switch(fieldType) {
+                case FieldType.String:
+                    return value as string;
+                case FieldType.Integer:
+                    return ((long)value).ToString();
+                case FieldType.Float:
+                    return ((double)value).ToString();
+                case FieldType.Unassigned:
+                    return string.Empty;
+                default:
+                    return Convert.ToString(value);
+            }
+        }
+
+        public string ToString(IFormatProvider provider) {
             switch(fieldType) {
                 case FieldType.String:
                     return value as string;
@@ -589,6 +613,21 @@ namespace JLChnToZ.Katana.Runner {
                     return ((long)value).ToString(provider);
                 case FieldType.Float:
                     return ((double)value).ToString(provider);
+                case FieldType.Unassigned:
+                    return string.Empty;
+                default:
+                    return Convert.ToString(value, provider);
+            }
+        }
+
+        public string ToString(string format, IFormatProvider provider) {
+            switch(fieldType) {
+                case FieldType.String:
+                    return value as string;
+                case FieldType.Integer:
+                    return ((long)value).ToString(format, provider);
+                case FieldType.Float:
+                    return ((double)value).ToString(format, provider);
                 case FieldType.Unassigned:
                     return string.Empty;
                 default:
@@ -882,9 +921,6 @@ namespace JLChnToZ.Katana.Runner {
         #endregion
 
         #region Cast
-        public override string ToString() =>
-            (this as IConvertible).ToString(null);
-
         public static implicit operator Field(string value) =>
             new Field(value);
 

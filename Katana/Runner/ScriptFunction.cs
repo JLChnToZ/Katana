@@ -1,29 +1,41 @@
 ﻿using System;
-using System.Collections.Generic;
 using JLChnToZ.Katana.Expressions;
 
 namespace JLChnToZ.Katana.Runner {
-    public class ScriptFunction: IFunction {
-        public readonly List<Node> arguments;
+    public class ScriptFunction: IFunction, IEquatable<ScriptFunction> {
+        public readonly Node arguments;
         public readonly Node body;
 
-        public ScriptFunction(IList<Node> arguments, Node body) {
-            this.arguments = new List<Node>(arguments);
+        public ScriptFunction(Node arguments, Node body) {
+            this.arguments = arguments;
             this.body = body;
         }
 
-        Field IFunction.Invoke(Runner runner, Node node) {
+        public Field Invoke(Runner runner, Node node) {
             try {
                 runner.PushContext();
-                for(int i = 0, l = arguments.Count; i < l; i++) {
-                    var arg = runner.Eval(arguments[i]).StringValue;
-                    runner.SetField(arg, node.Count > i ? runner.Eval(node[i]) : default);
-                }
-                var value = runner.Eval(body);
+                for(int i = 0, l = Math.Min(arguments.Count, node.Count); i < l; i++)
+                    runner.SetField(
+                        runner.Eval(arguments[i]).StringValue,
+                        runner.Eval(node[i]));
                 return runner.Eval(body);
             } finally {
                 runner.PopContext();
             }
         }
+
+        public override string ToString() =>
+            $"function ({arguments}, {body})";
+
+        public override int GetHashCode() =>
+            arguments.GetHashCode() ^ body.GetHashCode();
+
+        public override bool Equals(object obj) =>
+            obj is ScriptFunction other && Equals(other);
+
+        public bool Equals(ScriptFunction other) =>
+            other != null &&
+            arguments.Equals(other.arguments) &&
+            body.Equals(other.body);
     }
 }

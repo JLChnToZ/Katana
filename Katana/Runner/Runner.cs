@@ -19,11 +19,9 @@ namespace JLChnToZ.Katana.Runner {
         public object this[string key] {
             get => globalHeapStack.TryGetValue(key, out var field) ? field.Value : null;
             set {
-                if(!globalHeapStack.TryGetValue(key, out var field)) {
-                    field = default;
-                    globalHeapStack[key] = field;
-                }
+                globalHeapStack.TryGetValue(key, out var field);
                 field.Value = value;
+                globalHeapStack[key] = field;
             }
         }
 
@@ -68,9 +66,8 @@ namespace JLChnToZ.Katana.Runner {
         }
 
         public Field Eval(Node block) {
-            if(block.Count == 0) {
+            if(block.Count == 0)
                 return new Field(block.Tag);
-            }
             var cache = cacheStack.Peek();
             if(!cache.TryGetValue(block, out var result)) {
                 var nextMap = new Dictionary<Node, int>();
@@ -84,13 +81,13 @@ namespace JLChnToZ.Katana.Runner {
                         fn.FieldType == FieldType.BuiltInFunction &&
                         !(fn.Value as BuiltInFunction).enableDefer) {
                         PushCache();
-                        cache[node] = fn.Call(this, node);
+                        cache[node] = fn.Invoke(this, node);
                         PopCache();
                         lookupStack.Pop();
                         continue;
                     }
                     if(next >= node.Count) {
-                        cache[node] = hasFn ? fn.Call(this, node) : default;
+                        cache[node] = hasFn ? fn.Invoke(this, node) : default;
                         lookupStack.Pop();
                         continue;
                     }
@@ -104,7 +101,7 @@ namespace JLChnToZ.Katana.Runner {
         }
 
         public bool TryGetField(string tag, out Field field, bool forceLocal = false) {
-            if(heapStack.Peek().TryGetValue(tag, out field))
+            if(heapStack.Peek().TryGetValue(tag ?? string.Empty, out field))
                 return true;
             else if(!forceLocal && globalHeapStack.TryGetValue(tag, out field))
                 return true;
@@ -117,9 +114,9 @@ namespace JLChnToZ.Katana.Runner {
             return field;
         }
 
-        public Field SetField(string tag, Field value, bool foreceLocal = false) {
+        public Field SetField(string tag, Field value, bool forceLocal = false) {
             var localHeap = heapStack.Peek();
-            if(localHeap.ContainsKey(tag) || foreceLocal)
+            if(forceLocal || localHeap.ContainsKey(tag))
                 localHeap[tag] = value;
             else
                 globalHeapStack[tag] = value;
