@@ -181,9 +181,9 @@ namespace JLChnToZ.Katana.Runner {
         public List<Field> ListValue {
             get {
                 if(fieldType == FieldType.Unassigned) {
-                    fieldType = FieldType.Object;
+                    fieldType = FieldType.Array;
                     value = new List<Field>();
-                } else if(fieldType != FieldType.Object)
+                } else if(fieldType != FieldType.Array)
                     throw new InvalidCastException();
                 return value as List<Field>;
             }
