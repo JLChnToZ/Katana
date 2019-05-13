@@ -29,11 +29,11 @@ namespace JLChnToZ.Katana.Runner {
                         compareObj = v;
                         break;
                     case FieldType.String:
-                        if(Convert.ToString(v) != compareStr)
+                        if(v.StringValue != compareStr)
                             return 0;
                         break;
                     case FieldType.Float:
-                        if(Convert.ToDouble(v) != compareNum)
+                        if(v.FloatValue != compareNum)
                             return 0;
                         break;
                     case FieldType.Object:

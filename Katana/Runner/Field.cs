@@ -903,16 +903,36 @@ namespace JLChnToZ.Katana.Runner {
         #endregion
 
         #region Compare
-        public bool Equals(Field other) =>
-            fieldType == other.fieldType && Equals(objValue, other.objValue);
+        public bool Equals(Field other) {
+            if(fieldType != other.fieldType)
+                return false;
+            switch(fieldType) {
+                case FieldType.Unassigned:
+                    return true;
+                case FieldType.Integer:
+                    return intValue == other.intValue;
+                case FieldType.Float:
+                    return floatValue == other.floatValue;
+                default:
+                    return Equals(objValue, other.objValue);
+            }
+        }
 
         public override bool Equals(object obj) =>
             obj is Field field && Equals(field);
 
-        public override int GetHashCode() =>
-            objValue != null ?
-                objValue.GetHashCode() :
-                fieldType.GetHashCode();
+        public override int GetHashCode() {
+            switch(fieldType) {
+                case FieldType.Unassigned:
+                    return 0;
+                case FieldType.Integer:
+                    return intValue.GetHashCode();
+                case FieldType.Float:
+                    return floatValue.GetHashCode();
+                default:
+                    return objValue.GetHashCode();
+            }
+        }
         #endregion
 
         #region Cast
