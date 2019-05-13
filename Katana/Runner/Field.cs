@@ -2,31 +2,51 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using JLChnToZ.Katana.Expressions;
 
 namespace JLChnToZ.Katana.Runner {
+    [StructLayout(LayoutKind.Explicit)]
     public struct Field: IEquatable<Field>, IConvertible, IFormattable, IFunction, IList<Field>, IDictionary<string, Field> {
-        private object value;
+        [FieldOffset(0)]
         private FieldType fieldType;
+        [FieldOffset(4)]
+        private long intValue;
+        [FieldOffset(4)]
+        private double floatValue;
+        [FieldOffset(12)]
+        private object objValue;
 
         public object Value {
-            get => value;
+            get {
+                switch(fieldType) {
+                    case FieldType.Unassigned: return null;
+                    case FieldType.Integer: return intValue;
+                    case FieldType.Float: return floatValue;
+                    default: return objValue;
+                }
+            }
             set {
                 switch(fieldType = RunnerHelper.GetFieldType(value)) {
                     case FieldType.Unassigned:
-                        this.value = null;
+                        intValue = 0;
+                        objValue = null;
                         break;
                     case FieldType.Integer:
-                        this.value = Convert.ToInt64(value);
+                        intValue = Convert.ToInt64(value);
+                        objValue = null;
                         break;
                     case FieldType.Float:
-                        this.value = Convert.ToDouble(value);
+                        floatValue = Convert.ToDouble(value);
+                        objValue = null;
                         break;
                     case FieldType.String:
-                        this.value = Convert.ToString(value);
+                        intValue = 0;
+                        objValue = Convert.ToString(value);
                         break;
                     default:
-                        this.value = value;
+                        intValue = 0;
+                        objValue = value;
                         break;
                 }
             }
@@ -43,9 +63,9 @@ namespace JLChnToZ.Katana.Runner {
                 switch(fieldType) {
                     case FieldType.Array:
                     case FieldType.Object:
-                        return (value as ICollection).Count;
+                        return (objValue as ICollection).Count;
                     case FieldType.String:
-                        return (value as string).Length;
+                        return (objValue as string).Length;
                     default:
                         return 0;
                 }
@@ -66,7 +86,7 @@ namespace JLChnToZ.Katana.Runner {
                 switch(fieldType) {
                     case FieldType.Unassigned:
                         fieldType = FieldType.Array;
-                        this.value = new List<Field>(value);
+                        objValue = new List<Field>(value);
                         break;
                     case FieldType.Array:
                         if(ListValue.Capacity < value)
@@ -171,10 +191,10 @@ namespace JLChnToZ.Katana.Runner {
             get {
                 if(fieldType == FieldType.Unassigned) {
                     fieldType = FieldType.Object;
-                    value = new Dictionary<string, Field>();
+                    objValue = new Dictionary<string, Field>();
                 } else if(fieldType != FieldType.Object)
                     throw new InvalidCastException();
-                return value as Dictionary<string, Field>;
+                return objValue as Dictionary<string, Field>;
             }
         }
 
@@ -182,10 +202,10 @@ namespace JLChnToZ.Katana.Runner {
             get {
                 if(fieldType == FieldType.Unassigned) {
                     fieldType = FieldType.Array;
-                    value = new List<Field>();
+                    objValue = new List<Field>();
                 } else if(fieldType != FieldType.Array)
                     throw new InvalidCastException();
-                return value as List<Field>;
+                return objValue as List<Field>;
             }
         }
 
@@ -246,50 +266,74 @@ namespace JLChnToZ.Katana.Runner {
 
         #region Constructors
         internal Field(object value) {
-            this.value = value;
+            floatValue = 0;
+            intValue = 0;
+            objValue = null;
             fieldType = RunnerHelper.GetFieldType(value);
+            switch(fieldType) {
+                case FieldType.Unassigned: break;
+                case FieldType.Float:
+                    floatValue = Convert.ToDouble(value); break;
+                case FieldType.Integer:
+                    intValue = Convert.ToInt64(value); break;
+                default: objValue = value; break;
+            }
         }
 
         public Field(string value) {
-            this.value = value;
+            floatValue = 0;
+            intValue = 0;
+            objValue = value;
             fieldType = value == null ?
                 FieldType.Unassigned :
                 FieldType.String;
         }
 
         public Field(long value) {
-            this.value = value;
+            floatValue = 0;
+            intValue = value;
+            objValue = null;
             fieldType = FieldType.Integer;
         }
 
         public Field(double value) {
-            this.value = value;
+            intValue = 0;
+            floatValue = value;
+            objValue = null;
             fieldType = FieldType.Float;
         }
 
         public Field(BuiltInFunction value) {
-            this.value = value;
+            floatValue = 0;
+            intValue = 0;
+            objValue = value;
             fieldType = value == null ?
                 FieldType.Unassigned :
                 FieldType.BuiltInFunction;
         }
 
         public Field(ScriptFunction value) {
-            this.value = value;
+            floatValue = 0;
+            intValue = 0;
+            objValue = value;
             fieldType = value == null ?
                 FieldType.Unassigned :
                 FieldType.Function;
         }
 
         public Field(List<Field> value) {
-            this.value = value;
+            floatValue = 0;
+            intValue = 0;
+            objValue = value;
             fieldType = value == null ?
                 FieldType.Unassigned :
                 FieldType.Array;
         }
 
         public Field(Dictionary<string, Field> value) {
-            this.value = value;
+            floatValue = 0;
+            intValue = 0;
+            objValue = value;
             fieldType = value == null ?
                 FieldType.Unassigned :
                 FieldType.Object;
@@ -335,7 +379,7 @@ namespace JLChnToZ.Katana.Runner {
             switch(fieldType) {
                 case FieldType.BuiltInFunction:
                 case FieldType.Function:
-                    return (value as IFunction).Invoke(runner, node);
+                    return (objValue as IFunction).Invoke(runner, node);
                 default:
                     if(node.Count > 0)
                         throw new InvalidCastException();
@@ -366,14 +410,13 @@ namespace JLChnToZ.Katana.Runner {
         bool IConvertible.ToBoolean(IFormatProvider provider) {
             switch(fieldType) {
                 case FieldType.String:
-                    if(bool.TryParse(value as string, out var result))
+                    if(bool.TryParse(objValue as string, out var result))
                         return result;
-                    return !string.IsNullOrEmpty(value as string);
+                    return !string.IsNullOrEmpty(objValue as string);
                 case FieldType.Integer:
-                    return (long)value != 0;
+                    return intValue != 0;
                 case FieldType.Float:
-                    var doubleValue = (double)value;
-                    return doubleValue != 0 && !double.IsNaN(doubleValue);
+                    return floatValue != 0 && !double.IsNaN(floatValue);
                 case FieldType.Array:
                 case FieldType.Object:
                 case FieldType.Function:
@@ -387,13 +430,13 @@ namespace JLChnToZ.Katana.Runner {
         byte IConvertible.ToByte(IFormatProvider provider) {
             switch(fieldType) {
                 case FieldType.String:
-                    if(byte.TryParse(value as string, out var result))
+                    if(byte.TryParse(objValue as string, out var result))
                         return result;
                     goto default;
                 case FieldType.Integer:
-                    return unchecked((byte)(long)value);
+                    return unchecked((byte)intValue);
                 case FieldType.Float:
-                    return unchecked((byte)(double)value);
+                    return unchecked((byte)floatValue);
                 case FieldType.Unassigned:
                     return 0;
                 default:
@@ -404,13 +447,13 @@ namespace JLChnToZ.Katana.Runner {
         sbyte IConvertible.ToSByte(IFormatProvider provider) {
             switch(fieldType) {
                 case FieldType.String:
-                    if(sbyte.TryParse(value as string, out var result))
+                    if(sbyte.TryParse(objValue as string, out var result))
                         return result;
                     goto default;
                 case FieldType.Integer:
-                    return unchecked((sbyte)(long)value);
+                    return unchecked((sbyte)intValue);
                 case FieldType.Float:
-                    return unchecked((sbyte)(double)value);
+                    return unchecked((sbyte)floatValue);
                 case FieldType.Unassigned:
                     return 0;
                 default:
@@ -421,15 +464,15 @@ namespace JLChnToZ.Katana.Runner {
         char IConvertible.ToChar(IFormatProvider provider) {
             switch(fieldType) {
                 case FieldType.String:
-                    if(char.TryParse(value as string, out var chr))
+                    if(char.TryParse(objValue as string, out var chr))
                         return chr;
-                    if(ushort.TryParse(value as string, out ushort int16))
+                    if(ushort.TryParse(objValue as string, out ushort int16))
                         return (char)int16;
                     goto default;
                 case FieldType.Integer:
-                    return unchecked((char)(long)value);
+                    return unchecked((char)intValue);
                 case FieldType.Float:
-                    return unchecked((char)(double)value);
+                    return unchecked((char)floatValue);
                 case FieldType.Unassigned:
                     return '\0';
                 default:
@@ -440,13 +483,13 @@ namespace JLChnToZ.Katana.Runner {
         short IConvertible.ToInt16(IFormatProvider provider) {
             switch(fieldType) {
                 case FieldType.String:
-                    if(short.TryParse(value as string, out var result))
+                    if(short.TryParse(objValue as string, out var result))
                         return result;
                     goto default;
                 case FieldType.Integer:
-                    return unchecked((short)(long)value);
+                    return unchecked((short)intValue);
                 case FieldType.Float:
-                    return unchecked((short)(double)value);
+                    return unchecked((short)floatValue);
                 case FieldType.Unassigned:
                     return 0;
                 default:
@@ -457,13 +500,13 @@ namespace JLChnToZ.Katana.Runner {
         ushort IConvertible.ToUInt16(IFormatProvider provider) {
             switch(fieldType) {
                 case FieldType.String:
-                    if(ushort.TryParse(value as string, out var result))
+                    if(ushort.TryParse(objValue as string, out var result))
                         return result;
                     goto default;
                 case FieldType.Integer:
-                    return unchecked((ushort)(long)value);
+                    return unchecked((ushort)intValue);
                 case FieldType.Float:
-                    return unchecked((ushort)(double)value);
+                    return unchecked((ushort)floatValue);
                 case FieldType.Unassigned:
                     return 0;
                 default:
@@ -474,13 +517,13 @@ namespace JLChnToZ.Katana.Runner {
         int IConvertible.ToInt32(IFormatProvider provider) {
             switch(fieldType) {
                 case FieldType.String:
-                    if(int.TryParse(value as string, out var result))
+                    if(int.TryParse(objValue as string, out var result))
                         return result;
                     goto default;
                 case FieldType.Integer:
-                    return unchecked((int)(long)value);
+                    return unchecked((int)intValue);
                 case FieldType.Float:
-                    return unchecked((int)(double)value);
+                    return unchecked((int)floatValue);
                 case FieldType.Unassigned:
                     return 0;
                 default:
@@ -491,13 +534,13 @@ namespace JLChnToZ.Katana.Runner {
         uint IConvertible.ToUInt32(IFormatProvider provider) {
             switch(fieldType) {
                 case FieldType.String:
-                    if(uint.TryParse(value as string, out var result))
+                    if(uint.TryParse(objValue as string, out var result))
                         return result;
                     goto default;
                 case FieldType.Integer:
-                    return unchecked((uint)(long)value);
+                    return unchecked((uint)intValue);
                 case FieldType.Float:
-                    return unchecked((uint)(double)value);
+                    return unchecked((uint)floatValue);
                 case FieldType.Unassigned:
                     return 0;
                 default:
@@ -508,13 +551,13 @@ namespace JLChnToZ.Katana.Runner {
         long IConvertible.ToInt64(IFormatProvider provider) {
             switch(fieldType) {
                 case FieldType.String:
-                    if(uint.TryParse(value as string, out var result))
+                    if(uint.TryParse(objValue as string, out var result))
                         return result;
                     goto default;
                 case FieldType.Integer:
-                    return (long)value;
+                    return intValue;
                 case FieldType.Float:
-                    return unchecked((int)(double)value);
+                    return unchecked((int)floatValue);
                 case FieldType.Unassigned:
                     return 0;
                 default:
@@ -525,13 +568,13 @@ namespace JLChnToZ.Katana.Runner {
         ulong IConvertible.ToUInt64(IFormatProvider provider) {
             switch(fieldType) {
                 case FieldType.String:
-                    if(ulong.TryParse(value as string, out var result))
+                    if(ulong.TryParse(objValue as string, out var result))
                         return result;
                     goto default;
                 case FieldType.Integer:
-                    return unchecked((ulong)(long)value);
+                    return unchecked((ulong)intValue);
                 case FieldType.Float:
-                    return unchecked((ulong)(double)value);
+                    return unchecked((ulong)floatValue);
                 case FieldType.Unassigned:
                     return 0;
                 default:
@@ -542,13 +585,13 @@ namespace JLChnToZ.Katana.Runner {
         decimal IConvertible.ToDecimal(IFormatProvider provider) {
             switch(fieldType) {
                 case FieldType.String:
-                    if(decimal.TryParse(value as string, out var result))
+                    if(decimal.TryParse(objValue as string, out var result))
                         return result;
                     goto default;
                 case FieldType.Integer:
-                    return (long)value;
+                    return intValue;
                 case FieldType.Float:
-                    return (decimal)(double)value;
+                    return (decimal)floatValue;
                 case FieldType.Unassigned:
                     return 0;
                 default:
@@ -559,13 +602,13 @@ namespace JLChnToZ.Katana.Runner {
         float IConvertible.ToSingle(IFormatProvider provider) {
             switch(fieldType) {
                 case FieldType.String:
-                    if(float.TryParse(value as string, out var result))
+                    if(float.TryParse(objValue as string, out var result))
                         return result;
                     goto default;
                 case FieldType.Integer:
-                    return (long)value;
+                    return intValue;
                 case FieldType.Float:
-                    return unchecked((float)(double)value);
+                    return unchecked((float)floatValue);
                 case FieldType.Unassigned:
                     return 0;
                 default:
@@ -576,13 +619,13 @@ namespace JLChnToZ.Katana.Runner {
         double IConvertible.ToDouble(IFormatProvider provider) {
             switch(fieldType) {
                 case FieldType.String:
-                    if(double.TryParse(value as string, out var result))
+                    if(double.TryParse(objValue as string, out var result))
                         return result;
                     goto default;
                 case FieldType.Integer:
-                    return (long)value;
+                    return intValue;
                 case FieldType.Float:
-                    return (double)value;
+                    return floatValue;
                 case FieldType.Unassigned:
                     return 0;
                 default:
@@ -593,45 +636,45 @@ namespace JLChnToZ.Katana.Runner {
         public override string ToString() {
             switch(fieldType) {
                 case FieldType.String:
-                    return value as string;
+                    return objValue as string;
                 case FieldType.Integer:
-                    return ((long)value).ToString();
+                    return intValue.ToString();
                 case FieldType.Float:
-                    return ((double)value).ToString();
+                    return floatValue.ToString();
                 case FieldType.Unassigned:
                     return string.Empty;
                 default:
-                    return Convert.ToString(value);
+                    return Convert.ToString(objValue);
             }
         }
 
         public string ToString(IFormatProvider provider) {
             switch(fieldType) {
                 case FieldType.String:
-                    return value as string;
+                    return objValue as string;
                 case FieldType.Integer:
-                    return ((long)value).ToString(provider);
+                    return intValue.ToString(provider);
                 case FieldType.Float:
-                    return ((double)value).ToString(provider);
+                    return floatValue.ToString(provider);
                 case FieldType.Unassigned:
                     return string.Empty;
                 default:
-                    return Convert.ToString(value, provider);
+                    return Convert.ToString(objValue, provider);
             }
         }
 
         public string ToString(string format, IFormatProvider provider) {
             switch(fieldType) {
                 case FieldType.String:
-                    return value as string;
+                    return objValue as string;
                 case FieldType.Integer:
-                    return ((long)value).ToString(format, provider);
+                    return intValue.ToString(format, provider);
                 case FieldType.Float:
-                    return ((double)value).ToString(format, provider);
+                    return floatValue.ToString(format, provider);
                 case FieldType.Unassigned:
                     return string.Empty;
                 default:
-                    return Convert.ToString(value, provider);
+                    return Convert.ToString(objValue, provider);
             }
         }
 
@@ -667,11 +710,11 @@ namespace JLChnToZ.Katana.Runner {
                         if(conversionType.IsValueType) break;
                         return null;
                     }
-                    if(conversionType.IsAssignableFrom(value.GetType()))
-                        return value;
+                    if(conversionType.IsAssignableFrom(objValue.GetType()))
+                        return objValue;
                     break;
             }
-            return Convert.ChangeType(value, conversionType, provider);
+            return Convert.ChangeType(objValue, conversionType, provider);
         }
         #endregion
 
@@ -727,7 +770,7 @@ namespace JLChnToZ.Katana.Runner {
                         case FieldType.Integer:
                         case FieldType.Float:
                         case FieldType.String:
-                            return (value as string).IndexOf((string)item);
+                            return (objValue as string).IndexOf((string)item);
                         default:
                             return -1;
                     }
@@ -830,7 +873,7 @@ namespace JLChnToZ.Katana.Runner {
                     ListValue.RemoveAt(index);
                     break;
                 case FieldType.String:
-                    value = StringValue.Remove(index, 1);
+                    objValue = StringValue.Remove(index, 1);
                     break;
                 default:
                     throw new NotSupportedException();
@@ -852,7 +895,7 @@ namespace JLChnToZ.Katana.Runner {
                     ListValue.Clear();
                     break;
                 case FieldType.String:
-                    value = string.Empty;
+                    objValue = string.Empty;
                     break;
                 default:
                     throw new NotSupportedException();
@@ -909,14 +952,14 @@ namespace JLChnToZ.Katana.Runner {
 
         #region Compare
         public bool Equals(Field other) =>
-            fieldType == other.fieldType && Equals(value, other.value);
+            fieldType == other.fieldType && Equals(objValue, other.objValue);
 
         public override bool Equals(object obj) =>
             obj is Field field && Equals(field);
 
         public override int GetHashCode() =>
-            value != null ?
-                value.GetHashCode() :
+            objValue != null ?
+                objValue.GetHashCode() :
                 fieldType.GetHashCode();
         #endregion
 

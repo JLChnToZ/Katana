@@ -1,5 +1,5 @@
 ﻿namespace JLChnToZ.Katana.Runner {
-    public enum FieldType {
+    public enum FieldType: byte {
         Unassigned,
         Integer,
         Float,
