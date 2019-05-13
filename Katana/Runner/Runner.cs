@@ -18,11 +18,7 @@ namespace JLChnToZ.Katana.Runner {
 
         public object this[string key] {
             get => globalHeapStack.TryGetValue(key, out var field) ? field.Value : null;
-            set {
-                globalHeapStack.TryGetValue(key, out var field);
-                field.Value = value;
-                globalHeapStack[key] = field;
-            }
+            set => globalHeapStack[key] = new Field(value);
         }
 
         public Runner(Node root) {

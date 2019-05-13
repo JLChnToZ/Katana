@@ -14,7 +14,7 @@ namespace JLChnToZ.Katana.Runner {
             if(src.FieldType == FieldType.Array) {
                 if(start < 0) start = src.Count + start;
                 if(end <= 0) end = src.Count + end;
-                Field result = default;
+                Field result = new Field(FieldType.Array);
                 result.Capacity = end - start;
                 for(int i = start; i < end; i++)
                     result.Add(src[i]);
@@ -39,8 +39,8 @@ namespace JLChnToZ.Katana.Runner {
         public static Field ToCharArray(Runner runner, Node block) {
             if(block.Count < 2)
                 throw new ArgumentException();
-            var str = runner.Eval(block[0]);
-            Field result = default;
+            var str = runner.Eval(block[0]).StringValue;
+            Field result = new Field(FieldType.Array, str.Length);
             foreach(char c in str)
                 result.Add(c);
             return result;

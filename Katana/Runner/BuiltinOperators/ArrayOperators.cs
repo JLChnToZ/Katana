@@ -6,7 +6,7 @@ namespace JLChnToZ.Katana.Runner {
     public static partial class BuiltinOperators {
 
         public static Field CreateArray(Runner runner, Node block) {
-            Field result = default;
+            Field result = new Field(FieldType.Array, block.Count);
             foreach(var child in block)
                 result.Add(runner.Eval(child));
             return result;

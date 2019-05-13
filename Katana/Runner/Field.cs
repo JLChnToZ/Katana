@@ -7,15 +7,15 @@ using JLChnToZ.Katana.Expressions;
 
 namespace JLChnToZ.Katana.Runner {
     [StructLayout(LayoutKind.Explicit)]
-    public struct Field: IEquatable<Field>, IConvertible, IFormattable, IFunction, IList<Field>, IDictionary<string, Field> {
+    public readonly struct Field: IEquatable<Field>, IConvertible, IFormattable, IFunction, IList<Field>, IDictionary<string, Field> {
         [FieldOffset(0)]
-        private FieldType fieldType;
+        private readonly FieldType fieldType;
         [FieldOffset(4)]
-        private long intValue;
+        private readonly long intValue;
         [FieldOffset(4)]
-        private double floatValue;
+        private readonly double floatValue;
         [FieldOffset(12)]
-        private object objValue;
+        private readonly object objValue;
 
         public object Value {
             get {
@@ -24,30 +24,6 @@ namespace JLChnToZ.Katana.Runner {
                     case FieldType.Integer: return intValue;
                     case FieldType.Float: return floatValue;
                     default: return objValue;
-                }
-            }
-            set {
-                switch(fieldType = RunnerHelper.GetFieldType(value)) {
-                    case FieldType.Unassigned:
-                        intValue = 0;
-                        objValue = null;
-                        break;
-                    case FieldType.Integer:
-                        intValue = Convert.ToInt64(value);
-                        objValue = null;
-                        break;
-                    case FieldType.Float:
-                        floatValue = Convert.ToDouble(value);
-                        objValue = null;
-                        break;
-                    case FieldType.String:
-                        intValue = 0;
-                        objValue = Convert.ToString(value);
-                        break;
-                    default:
-                        intValue = 0;
-                        objValue = value;
-                        break;
                 }
             }
         }
@@ -84,14 +60,12 @@ namespace JLChnToZ.Katana.Runner {
             }
             set {
                 switch(fieldType) {
-                    case FieldType.Unassigned:
-                        fieldType = FieldType.Array;
-                        objValue = new List<Field>(value);
-                        break;
                     case FieldType.Array:
                         if(ListValue.Capacity < value)
                             ListValue.Capacity = value;
                         break;
+                    default:
+                        throw new InvalidCastException();
                 }
             }
         }
@@ -189,10 +163,7 @@ namespace JLChnToZ.Katana.Runner {
 
         public Dictionary<string, Field> HashValue {
             get {
-                if(fieldType == FieldType.Unassigned) {
-                    fieldType = FieldType.Object;
-                    objValue = new Dictionary<string, Field>();
-                } else if(fieldType != FieldType.Object)
+                if(fieldType != FieldType.Object)
                     throw new InvalidCastException();
                 return objValue as Dictionary<string, Field>;
             }
@@ -200,43 +171,24 @@ namespace JLChnToZ.Katana.Runner {
 
         public List<Field> ListValue {
             get {
-                if(fieldType == FieldType.Unassigned) {
-                    fieldType = FieldType.Array;
-                    objValue = new List<Field>();
-                } else if(fieldType != FieldType.Array)
+                if(fieldType != FieldType.Array)
                     throw new InvalidCastException();
                 return objValue as List<Field>;
             }
         }
 
-        public string StringValue {
-            get => (this as IConvertible).ToString(null);
-        }
+        public string StringValue => (this as IConvertible).ToString(null);
 
-        public long IntValue {
-            get => (this as IConvertible).ToInt64(null);
-        }
+        public long IntValue => (this as IConvertible).ToInt64(null);
 
-        public double FloatValue {
-            get => (this as IConvertible).ToDouble(null);
-        }
+        public double FloatValue => (this as IConvertible).ToDouble(null);
 
-        public bool IsTruly {
-            get => (this as IConvertible).ToBoolean(null);
-        }
+        public bool IsTruly => (this as IConvertible).ToBoolean(null);
 
         public Field GetAndEnsureType(Field key, FieldType type) {
             var result = this[key];
-            switch(type) {
-                case FieldType.Array:
-                    if(result.fieldType == FieldType.Unassigned)
-                        this[key] = result = new Field(new List<Field>());
-                    break;
-                case FieldType.Object:
-                    if(result.fieldType == FieldType.Unassigned)
-                        this[key] = result = new Field(new Dictionary<string, Field>());
-                    break;
-            }
+            if(result.fieldType == FieldType.Unassigned)
+                this[key] = result = new Field(type);
             return result;
         }
 
@@ -280,6 +232,29 @@ namespace JLChnToZ.Katana.Runner {
             }
         }
 
+        public Field(FieldType fieldType, int capacity = 4) {
+            this.fieldType = fieldType;
+            floatValue = 0;
+            intValue = 0;
+            switch(fieldType) {
+                case FieldType.Integer:
+                case FieldType.Float:
+                    objValue = null;
+                    break;
+                case FieldType.String:
+                    objValue = string.Empty;
+                    break;
+                case FieldType.Object:
+                    objValue = new Dictionary<string, Field>(capacity);
+                    break;
+                case FieldType.Array:
+                    objValue = new List<Field>(capacity);
+                    break;
+                default:
+                    throw new NotSupportedException();
+            }
+        }
+
         public Field(string value) {
             floatValue = 0;
             intValue = 0;
@@ -319,24 +294,6 @@ namespace JLChnToZ.Katana.Runner {
             fieldType = value == null ?
                 FieldType.Unassigned :
                 FieldType.Function;
-        }
-
-        public Field(List<Field> value) {
-            floatValue = 0;
-            intValue = 0;
-            objValue = value;
-            fieldType = value == null ?
-                FieldType.Unassigned :
-                FieldType.Array;
-        }
-
-        public Field(Dictionary<string, Field> value) {
-            floatValue = 0;
-            intValue = 0;
-            objValue = value;
-            fieldType = value == null ?
-                FieldType.Unassigned :
-                FieldType.Object;
         }
         #endregion
 
@@ -872,9 +829,6 @@ namespace JLChnToZ.Katana.Runner {
                     EnsuereRange(ref index);
                     ListValue.RemoveAt(index);
                     break;
-                case FieldType.String:
-                    objValue = StringValue.Remove(index, 1);
-                    break;
                 default:
                     throw new NotSupportedException();
             }
@@ -893,9 +847,6 @@ namespace JLChnToZ.Katana.Runner {
                     break;
                 case FieldType.Array:
                     ListValue.Clear();
-                    break;
-                case FieldType.String:
-                    objValue = string.Empty;
                     break;
                 default:
                     throw new NotSupportedException();
