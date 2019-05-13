@@ -9,7 +9,7 @@ namespace JLChnToZ.Katana.Runner {
             if(block.Count < 1)
                 throw new ArgumentException();
             var tag = Convert.ToString(block[0].Tag);
-            Field field = runner.GetFieldOrInit(tag);
+            Field field = runner.GetFieldOrInit(tag, block.Count > 1 ? FieldType.Object : FieldType.Unassigned);
             for(int i = 1, l = block.Count - 1; i < l; i++)
                 field = field.GetAndEnsureType(runner.Eval(block[i]), FieldType.Object);
             return field;
@@ -21,7 +21,7 @@ namespace JLChnToZ.Katana.Runner {
             var tag = Convert.ToString(block[0].Tag);
             if(block.Count == 2)
                 return runner.SetField(tag, runner.Eval(block[1]));
-            Field field = runner.GetFieldOrInit(tag);
+            Field field = runner.GetFieldOrInit(tag, FieldType.Object);
             for(int i = 1, l = block.Count - 2; i < l; i++)
                 field = field.GetAndEnsureType(runner.Eval(block[i]), FieldType.Object);
             return field[runner.Eval(block[block.Count - 2])] =
@@ -133,7 +133,7 @@ namespace JLChnToZ.Katana.Runner {
                 block[block.Count - 1]);
             if(block.Count == 3)
                 return runner.SetField(tag, result);
-            Field field = runner.GetFieldOrInit(tag);
+            Field field = runner.GetFieldOrInit(tag, FieldType.Object);
             for(int i = 1, l = block.Count - 3; i < l; i++)
                 field = field.GetAndEnsureType(runner.Eval(block[i]), FieldType.Object);
             return field[runner.Eval(block[block.Count - 3])] = result;

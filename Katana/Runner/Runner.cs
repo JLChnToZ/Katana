@@ -104,9 +104,9 @@ namespace JLChnToZ.Katana.Runner {
             return false;
         }
 
-        public Field GetFieldOrInit(string tag, bool forceLocal = false) {
+        public Field GetFieldOrInit(string tag, FieldType ensureType = FieldType.Unassigned, bool forceLocal = false) {
             if(!TryGetField(tag, out Field field, forceLocal))
-                heapStack.Peek()[tag] = field;
+                heapStack.Peek()[tag] = field = new Field(ensureType);
             return field;
         }
 

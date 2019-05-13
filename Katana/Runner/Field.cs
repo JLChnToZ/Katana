@@ -237,6 +237,7 @@ namespace JLChnToZ.Katana.Runner {
             floatValue = 0;
             intValue = 0;
             switch(fieldType) {
+                case FieldType.Unassigned:
                 case FieldType.Integer:
                 case FieldType.Float:
                     objValue = null;
