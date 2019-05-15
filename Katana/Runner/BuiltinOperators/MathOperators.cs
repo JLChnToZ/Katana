@@ -26,7 +26,7 @@ namespace JLChnToZ.Katana.Runner {
                             case FieldType.Integer:
                             case FieldType.Float:
                                 fieldType = FieldType.Float;
-                                resultNum = Convert.ToDouble(v);
+                                resultNum = v.FloatValue;
                                 break;
                             case FieldType.Array:
                                 fieldType = FieldType.Array;
@@ -47,7 +47,7 @@ namespace JLChnToZ.Katana.Runner {
                         resultStr.Append(v);
                         break;
                     case FieldType.Float:
-                        resultNum += Convert.ToDouble(v);
+                        resultNum += v.FloatValue;
                         break;
                     default:
                         throw new ArgumentException();

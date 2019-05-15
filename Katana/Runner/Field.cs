@@ -177,13 +177,13 @@ namespace JLChnToZ.Katana.Runner {
             }
         }
 
-        public string StringValue => (this as IConvertible).ToString(null);
+        public string StringValue => ToString();
 
-        public long IntValue => (this as IConvertible).ToInt64(null);
+        public long IntValue => ToInt64();
 
-        public double FloatValue => (this as IConvertible).ToDouble(null);
+        public double FloatValue => ToDouble();
 
-        public bool IsTruly => (this as IConvertible).ToBoolean(null);
+        public bool IsTruly => ToBoolean();
 
         public Field GetAndEnsureType(Field key, FieldType type) {
             var result = this[key];
@@ -218,6 +218,13 @@ namespace JLChnToZ.Katana.Runner {
 
         #region Constructors
         internal Field(object value) {
+            if(value is Field field) {
+                intValue = field.intValue;
+                floatValue = field.floatValue;
+                objValue = field.objValue;
+                fieldType = field.fieldType;
+                return;
+            }
             floatValue = 0;
             intValue = 0;
             objValue = null;
@@ -296,6 +303,36 @@ namespace JLChnToZ.Katana.Runner {
                 FieldType.Unassigned :
                 FieldType.Function;
         }
+
+        public Field(IEnumerable<Field> value) {
+            if(value is Field field) {
+                intValue = field.intValue;
+                floatValue = field.floatValue;
+                objValue = field.objValue;
+                fieldType = field.fieldType;
+                return;
+            }
+            floatValue = 0;
+            intValue = 0;
+            objValue = value as List<Field> ??
+                new List<Field>(value);
+            fieldType = FieldType.Array;
+        }
+
+        public Field(IDictionary<string, Field> value) {
+            if(value is Field field) {
+                intValue = field.intValue;
+                floatValue = field.floatValue;
+                objValue = field.objValue;
+                fieldType = field.fieldType;
+                return;
+            }
+            floatValue = 0;
+            intValue = 0;
+            objValue = value as Dictionary<string, Field> ??
+                new Dictionary<string, Field>(value);
+            fieldType = FieldType.Object;
+        }
         #endregion
 
         #region Internal Helpers
@@ -365,7 +402,7 @@ namespace JLChnToZ.Katana.Runner {
             }
         }
 
-        bool IConvertible.ToBoolean(IFormatProvider provider) {
+        private bool ToBoolean() {
             switch(fieldType) {
                 case FieldType.String:
                     if(bool.TryParse(objValue as string, out var result))
@@ -385,7 +422,9 @@ namespace JLChnToZ.Katana.Runner {
             }
         }
 
-        byte IConvertible.ToByte(IFormatProvider provider) {
+        bool IConvertible.ToBoolean(IFormatProvider provider) => ToBoolean();
+
+        private byte ToByte() {
             switch(fieldType) {
                 case FieldType.String:
                     if(byte.TryParse(objValue as string, out var result))
@@ -402,7 +441,9 @@ namespace JLChnToZ.Katana.Runner {
             }
         }
 
-        sbyte IConvertible.ToSByte(IFormatProvider provider) {
+        byte IConvertible.ToByte(IFormatProvider provider) => ToByte();
+
+        private sbyte ToSByte() {
             switch(fieldType) {
                 case FieldType.String:
                     if(sbyte.TryParse(objValue as string, out var result))
@@ -419,7 +460,9 @@ namespace JLChnToZ.Katana.Runner {
             }
         }
 
-        char IConvertible.ToChar(IFormatProvider provider) {
+        sbyte IConvertible.ToSByte(IFormatProvider provider) => ToSByte();
+
+        private char ToChar() {
             switch(fieldType) {
                 case FieldType.String:
                     if(char.TryParse(objValue as string, out var chr))
@@ -438,7 +481,9 @@ namespace JLChnToZ.Katana.Runner {
             }
         }
 
-        short IConvertible.ToInt16(IFormatProvider provider) {
+        char IConvertible.ToChar(IFormatProvider provider) => ToChar();
+
+        private short ToInt16() {
             switch(fieldType) {
                 case FieldType.String:
                     if(short.TryParse(objValue as string, out var result))
@@ -455,7 +500,9 @@ namespace JLChnToZ.Katana.Runner {
             }
         }
 
-        ushort IConvertible.ToUInt16(IFormatProvider provider) {
+        short IConvertible.ToInt16(IFormatProvider provider) => ToInt16();
+
+        private ushort ToUInt16() {
             switch(fieldType) {
                 case FieldType.String:
                     if(ushort.TryParse(objValue as string, out var result))
@@ -472,7 +519,9 @@ namespace JLChnToZ.Katana.Runner {
             }
         }
 
-        int IConvertible.ToInt32(IFormatProvider provider) {
+        ushort IConvertible.ToUInt16(IFormatProvider provider) => ToUInt16();
+
+        private int ToInt32() {
             switch(fieldType) {
                 case FieldType.String:
                     if(int.TryParse(objValue as string, out var result))
@@ -489,7 +538,9 @@ namespace JLChnToZ.Katana.Runner {
             }
         }
 
-        uint IConvertible.ToUInt32(IFormatProvider provider) {
+        int IConvertible.ToInt32(IFormatProvider provider) => ToInt32();
+
+        private uint ToUInt32() {
             switch(fieldType) {
                 case FieldType.String:
                     if(uint.TryParse(objValue as string, out var result))
@@ -506,7 +557,9 @@ namespace JLChnToZ.Katana.Runner {
             }
         }
 
-        long IConvertible.ToInt64(IFormatProvider provider) {
+        uint IConvertible.ToUInt32(IFormatProvider provider) => ToUInt32();
+
+        private long ToInt64() {
             switch(fieldType) {
                 case FieldType.String:
                     if(long.TryParse(objValue as string, out var result))
@@ -523,7 +576,9 @@ namespace JLChnToZ.Katana.Runner {
             }
         }
 
-        ulong IConvertible.ToUInt64(IFormatProvider provider) {
+        long IConvertible.ToInt64(IFormatProvider provider) => ToInt64();
+
+        private ulong ToUInt64() {
             switch(fieldType) {
                 case FieldType.String:
                     if(ulong.TryParse(objValue as string, out var result))
@@ -540,7 +595,9 @@ namespace JLChnToZ.Katana.Runner {
             }
         }
 
-        decimal IConvertible.ToDecimal(IFormatProvider provider) {
+        ulong IConvertible.ToUInt64(IFormatProvider provider) => ToUInt64();
+
+        private decimal ToDecimal() {
             switch(fieldType) {
                 case FieldType.String:
                     if(decimal.TryParse(objValue as string, out var result))
@@ -557,7 +614,9 @@ namespace JLChnToZ.Katana.Runner {
             }
         }
 
-        float IConvertible.ToSingle(IFormatProvider provider) {
+        decimal IConvertible.ToDecimal(IFormatProvider provider) => ToUInt64();
+
+        private float ToSingle() {
             switch(fieldType) {
                 case FieldType.String:
                     if(float.TryParse(objValue as string, out var result))
@@ -574,7 +633,9 @@ namespace JLChnToZ.Katana.Runner {
             }
         }
 
-        double IConvertible.ToDouble(IFormatProvider provider) {
+        float IConvertible.ToSingle(IFormatProvider provider) => ToSingle();
+
+        private double ToDouble() {
             switch(fieldType) {
                 case FieldType.String:
                     if(double.TryParse(objValue as string, out var result))
@@ -590,6 +651,8 @@ namespace JLChnToZ.Katana.Runner {
                     return double.NaN;
             }
         }
+
+        double IConvertible.ToDouble(IFormatProvider provider) => ToDouble();
 
         public override string ToString() {
             switch(fieldType) {
@@ -636,25 +699,26 @@ namespace JLChnToZ.Katana.Runner {
             }
         }
 
-        DateTime IConvertible.ToDateTime(IFormatProvider provider) {
+        DateTime IConvertible.ToDateTime(IFormatProvider provider) =>
             throw new InvalidCastException();
-        }
 
         object IConvertible.ToType(Type conversionType, IFormatProvider provider) {
             switch(Type.GetTypeCode(conversionType)) {
-                case TypeCode.Boolean: return (this as IConvertible).ToBoolean(provider);
-                case TypeCode.Byte: return (this as IConvertible).ToByte(provider);
-                case TypeCode.SByte: return (this as IConvertible).ToSByte(provider);
-                case TypeCode.Int16: return (this as IConvertible).ToInt16(provider);
-                case TypeCode.Int32: return (this as IConvertible).ToInt32(provider);
-                case TypeCode.Int64: return (this as IConvertible).ToInt64(provider);
-                case TypeCode.UInt16: return (this as IConvertible).ToUInt16(provider);
-                case TypeCode.UInt32: return (this as IConvertible).ToUInt32(provider);
-                case TypeCode.UInt64: return (this as IConvertible).ToUInt64(provider);
-                case TypeCode.Single: return (this as IConvertible).ToSingle(provider);
-                case TypeCode.Double: return (this as IConvertible).ToDouble(provider);
-                case TypeCode.Decimal: return (this as IConvertible).ToDecimal(provider);
-                case TypeCode.String: return (this as IConvertible).ToString(provider);
+                case TypeCode.Boolean: return ToBoolean();
+                case TypeCode.Byte: return ToByte();
+                case TypeCode.SByte: return ToSByte();
+                case TypeCode.Int16: return ToInt16();
+                case TypeCode.Int32: return ToInt32();
+                case TypeCode.Int64: return ToInt64();
+                case TypeCode.UInt16: return ToUInt16();
+                case TypeCode.UInt32: return ToUInt32();
+                case TypeCode.UInt64: return ToUInt64();
+                case TypeCode.Single: return ToSingle();
+                case TypeCode.Double: return ToDouble();
+                case TypeCode.Decimal: return ToDecimal();
+                case TypeCode.String: return ToString(provider);
+                case TypeCode.DateTime:
+                    throw new InvalidCastException();
                 case TypeCode.Empty:
                     if(fieldType == FieldType.Unassigned)
                         return null;
@@ -897,8 +961,7 @@ namespace JLChnToZ.Katana.Runner {
             return Enumerable.Empty<KeyValuePair<string, Field>>().GetEnumerator();
         }
 
-        IEnumerator IEnumerable.GetEnumerator() =>
-            (this as IEnumerable<Field>).GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         private static Field Char2Field(char c) {
             return new Field(c.ToString());
@@ -957,44 +1020,50 @@ namespace JLChnToZ.Katana.Runner {
         public static implicit operator Field(ScriptFunction value) =>
             new Field(value);
 
+        public static implicit operator Field(List<Field> value) =>
+            new Field(value);
+
+        public static implicit operator Field(Dictionary<string, Field> value) =>
+            new Field(value);
+
         public static explicit operator string(Field value) =>
-            (value as IConvertible).ToString(null);
+            value.ToString();
 
         public static explicit operator bool(Field value) =>
-            (value as IConvertible).ToBoolean(null);
+            value.ToBoolean();
 
         public static explicit operator byte(Field value) =>
-            (value as IConvertible).ToByte(null);
+            value.ToByte();
 
         public static explicit operator sbyte(Field value) =>
-            (value as IConvertible).ToSByte(null);
+            value.ToSByte();
 
         public static explicit operator char(Field value) =>
-            (value as IConvertible).ToChar(null);
+            value.ToChar();
 
         public static explicit operator short(Field value) =>
-            (value as IConvertible).ToInt16(null);
+            value.ToInt16();
 
         public static explicit operator ushort(Field value) =>
-            (value as IConvertible).ToUInt16(null);
+            value.ToUInt16();
 
         public static explicit operator int(Field value) =>
-            (value as IConvertible).ToInt32(null);
+            value.ToInt32();
 
         public static explicit operator uint(Field value) =>
-            (value as IConvertible).ToUInt32(null);
+            value.ToUInt32();
 
         public static explicit operator long(Field value) =>
-            (value as IConvertible).ToInt64(null);
+            value.ToInt64();
 
         public static explicit operator ulong(Field value) =>
-            (value as IConvertible).ToUInt64(null);
+            value.ToUInt64();
 
         public static explicit operator float(Field value) =>
-            (value as IConvertible).ToSingle(null);
+            value.ToSingle();
 
         public static explicit operator double(Field value) =>
-            (value as IConvertible).ToDouble(null);
+            value.ToDouble();
         #endregion
     }
 }

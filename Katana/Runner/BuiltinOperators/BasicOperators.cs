@@ -65,7 +65,7 @@ namespace JLChnToZ.Katana.Runner {
             Field result = default;
             foreach(var child in block) {
                 result = runner.Eval(child);
-                var field = runner.GetFieldOrInit(Convert.ToString(child));
+                var field = runner.GetFieldOrInit(Convert.ToString(child.Tag));
                 if(field.FieldType == FieldType.BuiltInFunction &&
                     field.Value == index["return"])
                     return result;
