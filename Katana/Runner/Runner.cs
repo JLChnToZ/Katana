@@ -66,34 +66,40 @@ namespace JLChnToZ.Katana.Runner {
                 return new Field(block.Tag);
             var cache = cacheStack.Peek();
             if(!cache.TryGetValue(block, out var result)) {
-                var nextMap = new Dictionary<Node, int>();
-                var lookupStack = new Stack<Node>();
-                lookupStack.Push(block);
+                var lookupStack = new Stack<(Node, int)>();
+                lookupStack.Push((block, 0));
                 while(lookupStack.Count > 0) {
-                    var node = lookupStack.Peek();
-                    nextMap.TryGetValue(node, out int next);
+                    var (node, next) = lookupStack.Pop();
+                    if(node.Count == 0) {
+                        ResolveNodeToCache(cache, node, new Field(node.Tag), false);
+                        continue;
+                    }
                     var hasFn = TryGetField(Convert.ToString(node.Tag), out var fn);
                     if(hasFn &&
                         fn.FieldType == FieldType.BuiltInFunction &&
                         !(fn.Value as BuiltInFunction).enableDefer) {
                         PushCache();
-                        cache[node] = fn.Invoke(this, node);
+                        ResolveNodeToCache(cache, node, fn, true);
                         PopCache();
-                        lookupStack.Pop();
                         continue;
                     }
                     if(next >= node.Count) {
-                        cache[node] = hasFn ? fn.Invoke(this, node) : default;
-                        lookupStack.Pop();
+                        ResolveNodeToCache(cache, node, fn, true);
                         continue;
                     }
-                    lookupStack.Push(node[next]);
-                    nextMap[node] = next + 1;
+                    lookupStack.Push((node, next + 1));
+                    lookupStack.Push((node[next], 0));
                 }
                 result = cache[block];
-            } else
-                cache.Remove(block);
+            }
             return result;
+        }
+
+        private void ResolveNodeToCache(Dictionary<Node, Field> cache, Node node, Field value, bool doInvoke) {
+            cache[node] = doInvoke ? value.Invoke(this, node) : value;
+            if(node.Count > 0)
+                foreach(var child in node)
+                    cache.Remove(child);
         }
 
         public bool TryGetField(string tag, out Field field, bool forceLocal = false) {

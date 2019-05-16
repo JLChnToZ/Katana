@@ -9,9 +9,12 @@ namespace JLChnToZ.Katana.Runner {
             if(block.Count < 1)
                 throw new ArgumentException();
             var tag = Convert.ToString(block[0].Tag);
-            Field field = runner.GetFieldOrInit(tag, block.Count > 1 ? FieldType.Object : FieldType.Unassigned);
-            for(int i = 1, l = block.Count - 1; i < l; i++)
-                field = field.GetAndEnsureType(runner.Eval(block[i]), FieldType.Object);
+            Field field = runner.GetFieldOrInit(tag,
+                block.Count > 2 ? FieldType.Object : FieldType.Unassigned);
+            for(int i = 1, l = block.Count; i < l; i++)
+                field = field.GetAndEnsureType(
+                    runner.Eval(block[i]),
+                    i < l - 1 ? FieldType.Object : FieldType.Unassigned);
             return field;
         }
 

@@ -7,7 +7,7 @@ using JLChnToZ.Katana.Expressions;
 
 namespace JLChnToZ.Katana.Runner {
     [StructLayout(LayoutKind.Explicit)]
-    public readonly struct Field: IEquatable<Field>, IConvertible, IFormattable, IFunction, IList<Field>, IDictionary<string, Field> {
+    public struct Field: IEquatable<Field>, IConvertible, IFormattable, IFunction, IList<Field>, IDictionary<string, Field> {
         [FieldOffset(0)]
         private readonly FieldType fieldType;
         [FieldOffset(4)]
@@ -375,6 +375,14 @@ namespace JLChnToZ.Katana.Runner {
                 case FieldType.BuiltInFunction:
                 case FieldType.Function:
                     return (objValue as IFunction).Invoke(runner, node);
+                case FieldType.Array:
+                case FieldType.Object:
+                    var value = this;
+                    for(int i = 1, l = node.Count; i < l; i++)
+                        value = value.GetAndEnsureType(
+                            runner.Eval(node[i]),
+                            i < l - 1 ? FieldType.Object : FieldType.Unassigned);
+                    return value;
                 default:
                     if(node.Count > 0)
                         throw new InvalidCastException();
