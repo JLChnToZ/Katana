@@ -421,7 +421,9 @@ namespace JLChnToZ.Katana.Runner {
                 case FieldType.Float:
                     return floatValue != 0 && !double.IsNaN(floatValue);
                 case FieldType.Array:
+                    return ListValue.Count > 0;
                 case FieldType.Object:
+                    return HashValue.Count > 0;
                 case FieldType.Function:
                 case FieldType.BuiltInFunction:
                     return true;
