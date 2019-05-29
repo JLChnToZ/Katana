@@ -39,8 +39,11 @@ namespace JLChnToZ.Katana.Expressions {
                     sb.Append(',');
                 IndentAndLinebreak(ref firstLine, stack.Count, sb);
                 bool hasSerializeName = SerializeName(currentNode.Tag, sb);
-                if(currentNode.Count <= 0)
+                if(currentNode.Count <= 0) {
+                    if(!hasSerializeName)
+                        sb.Append("nil");
                     continue;
+                }
                 if(hasSerializeName)
                     sb.Append(' ');
                 sb.Append('(');
@@ -51,30 +54,74 @@ namespace JLChnToZ.Katana.Expressions {
         private static bool SerializeName(object src, StringBuilder sb) {
             if(src == null)
                 return false;
-            if(src.GetType().IsPrimitive && !(src is char)) {
-                sb.Append(src);
-                return true;
+            switch(Convert.GetTypeCode(src)) {
+                case TypeCode.Boolean:
+                    sb.Append(Convert.ToBoolean(src) ?
+                        "true" :
+                        "false");
+                    return true;
+                case TypeCode.Single:
+                case TypeCode.Double:
+                    var floatValue = Convert.ToDouble(src);
+                    if(double.IsInfinity(floatValue))
+                        sb.Append(floatValue > 0 ?
+                            "infinity" :
+                            "-infinity");
+                    else if(double.IsNaN(floatValue))
+                        sb.Append("nan");
+                    else
+                        sb.Append(floatValue);
+                    return true;
+                case TypeCode.Byte:
+                case TypeCode.SByte:
+                case TypeCode.Int16:
+                case TypeCode.UInt16:
+                case TypeCode.Int32:
+                case TypeCode.UInt32:
+                case TypeCode.Int64:
+                case TypeCode.UInt64:
+                case TypeCode.Decimal:
+                    sb.Append(src);
+                    return true;
             }
             var srcStr = src.ToString();
-            bool needWrap = srcStr == string.Empty;
-            if(!needWrap)
-                foreach(var c in srcStr) {
-                    switch(c) {
-                        case '(':
-                        case ')':
-                        case ',':
-                        case '\"':
-                        case '\'':
-                        case '\\':
-                            needWrap = true;
-                            break;
-                        default:
-                            if(CanIgnoreChar(c))
-                                needWrap = true;
-                            break;
+            bool needWrap = false;
+            switch(srcStr.ToLower()) {
+                case "":
+                case "nil":
+                case "null":
+                case "true":
+                case "false":
+                case "infinity":
+                case "+infinity":
+                case "-infinity":
+                case "nan":
+                    needWrap = true;
+                    break;
+                default:
+                    if(numberMatcher.IsMatch(srcStr)) {
+                        needWrap = true;
+                        break;
                     }
-                    if(needWrap) break;
-                }
+                    foreach(var c in srcStr) {
+                        switch(c) {
+                            case '(':
+                            case ')':
+                            case ',':
+                            case '\"':
+                            case '\'':
+                            case '\\':
+                                needWrap = true;
+                                break;
+                            default:
+                                if(CanIgnoreChar(c))
+                                    needWrap = true;
+                                break;
+                        }
+                        if(needWrap) break;
+                    }
+                    break;
+            }
             if(needWrap)
                 SerializeNameWithQuotes(srcStr, sb);
             else
@@ -400,7 +447,11 @@ namespace JLChnToZ.Katana.Expressions {
                             result = null;
                             break;
                         case "infinity":
+                        case "+infinity":
                             result = double.PositiveInfinity;
+                            break;
+                        case "-infinity":
+                            result = double.NegativeInfinity;
                             break;
                         case "nan":
                             result = double.NaN;
