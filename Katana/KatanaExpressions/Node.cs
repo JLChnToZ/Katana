@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace JLChnToZ.Katana.Expressions {
-    public class Node: IList<Node>, ICloneable {
+    public partial class Node: IList<Node>, ICloneable {
         private List<Node> nodes;
 
         public object Tag { get; }

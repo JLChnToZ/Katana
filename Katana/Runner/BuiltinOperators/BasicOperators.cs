@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using JLChnToZ.Katana.Expressions;
 
 namespace JLChnToZ.Katana.Runner {
@@ -8,7 +7,7 @@ namespace JLChnToZ.Katana.Runner {
         public static Field GetValue(Runner runner, Node block) {
             if(block.Count < 1)
                 throw new ArgumentException();
-            var tag = Convert.ToString(block[0].Tag);
+            var tag = Convert.ToString(block[0]);
             Field field = runner.GetFieldOrInit(tag,
                 block.Count > 2 ? FieldType.Object : FieldType.Unassigned);
             for(int i = 1, l = block.Count; i < l; i++)
@@ -21,7 +20,7 @@ namespace JLChnToZ.Katana.Runner {
         public static Field SetValue(Runner runner, Node block) {
             if(block.Count < 2)
                 throw new ArgumentException();
-            var tag = Convert.ToString(block[0].Tag);
+            var tag = Convert.ToString(block[0]);
             if(block.Count == 2)
                 return runner.SetField(tag, runner.Eval(block[1]));
             Field field = runner.GetFieldOrInit(tag, FieldType.Object);
@@ -68,7 +67,7 @@ namespace JLChnToZ.Katana.Runner {
             Field result = default;
             foreach(var child in block) {
                 result = runner.Eval(child);
-                var field = runner.GetFieldOrInit(Convert.ToString(child.Tag));
+                var field = runner.GetFieldOrInit(Convert.ToString(child));
                 if(field.FieldType == FieldType.BuiltInFunction &&
                     field.Value == index["return"])
                     return result;
@@ -130,7 +129,7 @@ namespace JLChnToZ.Katana.Runner {
         public static Field Function(Runner runner, Node block) {
             if(block.Count < 3)
                 throw new ArgumentException();
-            var tag = Convert.ToString(block[0].Tag);
+            var tag = Convert.ToString(block[0]);
             var result = new ScriptFunction(
                 block[block.Count - 2],
                 block[block.Count - 1]);

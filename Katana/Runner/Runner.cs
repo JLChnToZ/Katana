@@ -74,7 +74,7 @@ namespace JLChnToZ.Katana.Runner {
                         ResolveNodeToCache(cache, node, new Field(node.Tag), false);
                         continue;
                     }
-                    var hasFn = TryGetField(Convert.ToString(node.Tag), out var fn);
+                    var hasFn = TryGetField(Convert.ToString(node), out var fn);
                     if(hasFn &&
                         fn.FieldType == FieldType.BuiltInFunction &&
                         !(fn.Value as BuiltInFunction).enableDefer) {

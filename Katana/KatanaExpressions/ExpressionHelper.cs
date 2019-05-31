@@ -227,14 +227,14 @@ namespace JLChnToZ.Katana.Expressions {
                                 break;
                             case ',':
                                 if(nodeStack.Count < 1)
-                                    throw new ArgumentException($"Unexpected '{c}'.");
+                                    throw new SyntaxException($"Unexpected '{c}'", source, i);
                                 nodeStack.Peek().Add(CreateNode(sb, hasQuote, false));
                                 hasQuote = false;
                                 hasAddNode = true;
                                 break;
                             case ')':
                                 if(nodeStack.Count < 1)
-                                    throw new ArgumentException($"Unexpected '{c}'.");
+                                    throw new SyntaxException($"Unexpected '{c}'", source, i);
                                 current = CreateNode(sb, hasQuote, !hasAddNode);
                                 var parent = nodeStack.Pop();
                                 if(current != null)
@@ -248,7 +248,7 @@ namespace JLChnToZ.Katana.Expressions {
                                 if(sb.Count > 0)
                                     foreach(var chr in sb)
                                         if(!CanIgnoreChar(chr))
-                                            throw new ArgumentException($"Unexpected '{c}'.");
+                                            throw new SyntaxException($"Unexpected '{c}'", source, i);
                                 sb.Clear();
                                 mode = TokenMode.InStringEscape;
                                 stringPairChar = c;
@@ -279,7 +279,7 @@ namespace JLChnToZ.Katana.Expressions {
                                 isComments = true;
                                 break;
                             default:
-                                throw new ArgumentException($"Unexpected '{c}'.");
+                                throw new SyntaxException($"Unexpected '{c}'", source, i);
                         }
                         break;
                     case TokenMode.ExpressionAfterString:
@@ -295,7 +295,7 @@ namespace JLChnToZ.Katana.Expressions {
                                 break;
                             default:
                                 if(!CanIgnoreChar(c))
-                                    throw new ArgumentException($"Unexpected '{c}'.");
+                                    throw new SyntaxException($"Unexpected '{c}'", source, i);
                                 break;
                         }
                         break;
@@ -415,14 +415,14 @@ namespace JLChnToZ.Katana.Expressions {
                 case TokenMode.ExpressionAfterString:
                     break;
                 case TokenMode.Escape:
-                    throw new ArgumentException("Escape does not resolve.");
+                    throw new SyntaxException("Escape does not resolve", source, source.Length);
                 default:
-                    throw new ArgumentException($"Missing '{stringPairChar}'");
+                    throw new SyntaxException($"Missing '{stringPairChar}'", source, source.Length);
             }
             if(result == null)
                 result = CreateNode(sb, hasQuote, true);
             if(nodeStack.Count > 1)
-                throw new ArgumentException("Missing ')'.");
+                throw new SyntaxException("Missing ')'", source, source.Length);
             return result;
         }
 
@@ -540,6 +540,60 @@ namespace JLChnToZ.Katana.Expressions {
                 }
             }
             return true;
+        }
+    }
+
+    public class SyntaxException: Exception {
+        private int line, column;
+        private int lineOffset = -1;
+
+        public string SourceCode { get; private set; }
+
+        public int Offset { get; private set; }
+
+        public int Line {
+            get {
+                if(lineOffset < 0)
+                    CountLine();
+                return line;
+            }
+        }
+
+        public int Column {
+            get {
+                if(lineOffset < 0)
+                    CountLine();
+                return column;
+            }
+        }
+
+        public override string Message => $"{base.Message} at ({Line + 1}, {Column + 1}).";
+
+        public SyntaxException(string message, string source, int offset) :
+            base(message) {
+            SourceCode = source;
+            Offset = offset;
+        }
+
+        private void CountLine() {
+            var source = SourceCode;
+            int offset = Offset;
+            column = offset;
+            lineOffset = 0;
+            line = 0;
+            if(source == null) return;
+            for(int i = 0, l = Math.Min(offset, source.Length); i < l; i++)
+                switch(source[i]) {
+                    case '\n':
+                        if(i > 0 && source[i - 1] == '\r')
+                            break;
+                        goto case '\r';
+                    case '\r':
+                        column = offset - i;
+                        lineOffset = i;
+                        line++;
+                        break;
+                }
         }
     }
 }
