@@ -384,23 +384,23 @@ namespace JLChnToZ.Katana.Expressions {
                         break;
                     case TokenMode.InStringEscapeOct:
                         if(!AppendOct(c, ref escapeCharCode)) {
-                            mode = TokenMode.InStringEscape;
+                            mode = TokenMode.InString;
                             if(source[escapeReturnOffset] == '0') {
-                                i = escapeReturnOffset + 1;
+                                i = escapeReturnOffset;
                                 sb.Add('\0');
                             } else
-                                i = escapeReturnOffset;
+                                i = escapeReturnOffset - 1;
                         } else if(i - escapeCharCode >= 2) {
-                            mode = TokenMode.InStringEscape;
+                            mode = TokenMode.InString;
                             sb.Add((char)escapeCharCode);
                         }
                         break;
                     case TokenMode.InStringEscapeHex:
                         if(!AppendHex(c, ref escapeCharCode)) {
-                            mode = TokenMode.InStringEscape;
-                            i = escapeReturnOffset;
+                            mode = TokenMode.InString;
+                            i = escapeReturnOffset - 1;
                         } else if(i - escapeCharCode >= byteLength) {
-                            mode = TokenMode.InStringEscape;
+                            mode = TokenMode.InString;
                             if(byteLength > 4)
                                 sb.AddRange(char.ConvertFromUtf32(escapeCharCode));
                             else
@@ -502,7 +502,6 @@ namespace JLChnToZ.Katana.Expressions {
                 }
             }
             return true;
-
         }
 
         private static bool AppendHex(char c, ref int num) {
